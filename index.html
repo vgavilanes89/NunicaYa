@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - Costa Rica Classifieds</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder">
+        <!-- Reusable header will be loaded here by app.js -->
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-6xl py-8">
+        
+        <!-- Page Title -->
+         <!-- Changed to flex layout for robust centering --> 
+        <div class="flex flex-col items-center mb-8">
+            <h2 class="text-4xl font-bold lang-en">Costa Rica</h2>
+            <h2 class="text-4xl font-bold lang-es">Costa Rica</h2>
+            <p class="text-lg text-gray-600 lang-en">Local Classifieds</p>
+            <p class="text-lg text-gray-600 lang-es">Anuncios Clasificados</p>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="mb-8">
+            <!-- MODIFIED: Added id="search-form" -->
+            <form id="search-form" class="flex w-full max-w-2xl mx-auto">
+                <!-- This placeholder will be set by the script below -->
+                <input type="text" placeholder="" class="flex-grow p-3 border border-gray-400 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="search-input">
+                <button type="submit" class="bg-blue-600 text-white p-3 rounded-r-md hover:bg-blue-700">
+                    <span class="lang-en">Search</span>
+                    <span class="lang-es">Buscar</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Category Columns (Static content) -->
+        <div class="flex flex-wrap -mx-4">
+
+            <!-- Housing -->
+            <div class="category-block">
+                <h3 class="category-title">
+                    <span class="lang-en">Housing</span>
+                    <span class="lang-es">Vivienda</span>
+                </h3>
+                <ul class="subcategory-list">
+                    <li><a href="./pages/housing/apartments.html" class="category-link"><span class="lang-en">apartments / housing</span><span class="lang-es">apartamentos / casas</span></a></li>
+                    <li><a href="./pages/housing/rentalsWanted.html" class="category-link"><span class="lang-en">rentals wanted</span><span class="lang-es">busco alquiler</span></a></li>
+                    <li><a href="./pages/housing/roomsShared.html" class="category-link"><span class="lang-en">rooms / shared</span><span class="lang-es">cuartos / compartido</span></a></li>
+                    <li><a href="./pages/housing/sublets.html" class="category-link"><span class="lang-en">sublets / temporary</span><span class="lang-es">subarriendo / temporal</span></a></li>
+                    <li><a href="./pages/housing/RealEstate.html" class="category-link"><span class="lang-en">real estate for sale</span><span class="lang-es">bienes raíces en venta</span></a></li>
+                    <li><a href="./pages/housing/vacationRentals.html" class="category-link"><span class="lang-en">vacation rentals</span><span class="lang-es">alquileres de vacaciones</span></a></li>
+                </ul>
+            </div>
+
+            <!-- For Sale -->
+            <div class="category-block">
+                <h3 class="category-title">
+                    <span class="lang-en">For Sale</span>
+                    <span class="lang-es">En Venta</span>
+                </h3>
+                <ul class="subcategory-list">
+                     <!-- Fixed paths --> 
+                    <li><a href="./pages/For Sale/autoParts.html" class="category-link"><span class="lang-en">auto parts</span><span class="lang-es">repuestos</span></a></li>
+                    <li><a href="./pages/For Sale/carsTrucks.html" class="category-link"><span class="lang-en">cars & trucks</span><span class="lang-es">carros y camiones</span></a></li>
+                    <li><a href="./pages/For Sale/electonics.html" class="category-link"><span class="lang-en">electronics</span><span class="lang-es">electrónicos</span></a></li>
+                    <li><a href="./pages/For Sale/furniture.html" class="category-link"><span class="lang-en">furniture</span><span class="lang-es">muebles</span></a></li>
+                    <li><a href="./pages/For Sale/household.html" class="category-link"><span class="lang-en">household</span><span class="lang-es">artículos del hogar</span></a></li>
+                    <li><a href="./pages/For Sale/motorcycles.html" class="category-link"><span class="lang-en">motorcycles</span><span class="lang-es">motocicletas</span></a></li>
+                    <li><a href="./pages/For Sale/free.html" class="category-link"><span class="lang-en">free</span><span class="lang-es">gratis</span></a></li>
+                </ul>
+            </div>
+
+            <!-- Jobs -->
+            <div class="category-block">
+                <h3 class="category-title">
+                    <span class="lang-en">Jobs</span>
+                    <span class="lang-es">Empleo</span>
+                </h3>
+                <ul class="subcategory-list">
+                     <!-- Fixed paths --> 
+                    <li><a href="./pages/Jobs/adminOffice.html" class="category-link"><span class="lang-en">admin / office</span><span class="lang-es">admin / oficina</span></a></li>
+                    <li><a href="./pages/Jobs/customerService.html" class="category-link"><span class="lang-en">customer service</span><span class="lang-es">servicio al cliente</span></a></li>
+                    <li><a href="./pages/Jobs/hospitalityHotel.html" class="category-link"><span class="lang-en">hospitality / hotel</span><span class="lang-es">hotelería / hospitalidad</span></a></li>
+                    <li><a href="./pages/Jobs/salesMarketing.html" class="category-link"><span class="lang-en">sales / marketing</span><span class="lang-es">ventas / mercadeo</span></a></li>
+                    <li><a href="./pages/Jobs/softwareIT.html" class="category-link"><span class="lang-en">software / IT</span><span class="lang-es">software / TI</span></a></li>
+                    <li><a href="./pages/Jobs/tourism.html" class="category-link"><span class="lang-en">tourism</span><span class="lang-es">turismo</span></a></li>
+                    <li><a href="./pages/Jobs/generalLabor.html" class="category-link"><span class="lang-es">trabajo general</span><span class="lang-en">general labor</span></a></li>
+                </ul>
+            </div>
+
+            <!-- Services -->
+            <div class="category-block">
+                <h3 class="category-title">
+                    <span class="lang-en">Services</span>
+                    <span class="lang-es">Servicios</span>
+                </h3>
+                <ul class="subcategory-list">
+                     <!-- Fixed paths --> 
+                    <li><a href="./pages/Services/automotive.html" class="category-link"><span class="lang-en">automotive</span><span class="lang-es">automotriz</span></a></li>
+                    <li><a href="./pages/Services/computer.html" class="category-link"><span class="lang-en">computer</span><span class="lang-es">computación</span></a></li>
+                    <li><a href="./pages/Services/financial.html" class="category-link"><span class="lang-en">financial</span><span class="lang-es">financiero</span></a></li>
+                    <li><a href="./pages/Services/legal.html" class="category-link"><span class="lang-en">legal</span><span class="lang-es">legal</span></a></li>
+                    <li><a href="./pages/Services/lessons.html" class="category-link"><span class="lang-en">lessons & tutoring</span><span class="lang-es">lecciones & tutorías</span></a></li>
+                    <li><a href="./pages/Services/realEstate.html" class="category-link"><span class="lang-en">real estate</span><span class="lang-es">bienes raíces</span></a></li>
+                    <li><a href="./pages/Services/skilledTrade.html" class="category-link"><span class="lang-en">skilled trade</span><span class="lang-es">oficios</span></a></li>
+                </ul>
+            </div>
+
+            <!-- Community -->
+            <div class="category-block">
+                <h3 class="category-title">
+                    <span class="lang-en">Community</span>
+                    <span class="lang-es">Comunidad</span>
+                </h3>
+                <ul class="subcategory-list">
+                     <!-- Fixed paths --> 
+                    <li><a href="./pages/Community/activities.html" class="category-link"><span class="lang-en">activities</span><span class="lang-es">actividades</span></a></li>
+                    <li><a href="./pages/Community/classes.html" class="category-link"><span class="lang-en">classes</span><span class="lang-es">clases</span></a></li>
+                    <li><a href="./pages/Community/events.html" class="category-link"><span class="lang-en">events</span><span class="lang-es">eventos</span></a></li>
+                    <li><a href="./pages/Community/localNews.html" class="category-link"><span class="lang-en">local news</span><span class="lang-es">noticias locales</span></a></li>
+                    <li><a href="./pages/Community/lostFound.html" class="category-link"><span class="lang-en">lost & found</span><span class="lang-es">perdidos y encontrados</span></a></li>
+                    <li><a href="./pages/Community/volunteers.html" class="category-link"><span class="lang-en">volunteers</span><span class="lang-es">voluntarios</span></a></li>
+                </ul>
+            </div>
+
+            <!-- Personals -->
+            <div class="category-block">
+                <h3 class="category-title">
+                    <span class="lang-en">Personals</span>
+                    <span class="lang-es">Personales</span>
+                </h3>
+                <ul class="subcategory-list">
+                     <!-- Fixed paths --> 
+                    <li><a href="./pages/Personals/strictlyPlatonic.html" class="category-link"><span class="lang-en">strictly platonic</span><span class="lang-es">estrictamente platónico</span></a></li>
+                    <li><a href="./pages/Personals/womenSeekingMen.html" class="category-link"><span class="lang-en">women seek men</span><span class="lang-es">mujeres buscan hombres</span></a></li>
+                    <li><a href="./pages/Personals/menSeekingWomen.html" class="category-link"><span class="lang-en">men seek women</span><span class="lang-es">hombres buscan mujeres</span></a></li>
+                    <li><a href="./pages/Personals/menSeekingMen.html" class="category-link"><span class="lang-en">men seek men</span><span class="lang-es">hombres buscan hombres</span></a></li>
+                    <li><a href="./pages/Personals/womenSeekingWomen.html" class="category-link"><span class="lang-en">women seek women</span><span class="lang-es">mujeres buscan mujeres</span></a></li>
+                </ul>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder">
+        <!-- Reusable footer will be loaded here by app.js -->
+    </div>
+    
+    <!-- Main Application Script -->
+    <script src="app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // 1. Define page-specific text for placeholders
+        const indexPageText = {
+            'search-input': {
+                en: 'Search NunciaYa...',
+                es: 'Buscar en NunciaYa...'
+            }
+            // Add other IDs here if this page had more
+        };
+        
+        // 2. Set the default language for this page
+        let currentLang = 'es';
+
+        // 3. Re-assign the global setLang function
+        // This is so we can pass our page-specific text to the global function
+        const globalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            if (lang) {
+                currentLang = lang;
+            }
+            globalSetLang(currentLang, indexPageText);
+        };
+
+        // --- NEW: 4. Search Handler ---
+        function handleSearchSubmit(event) {
+            event.preventDefault();
+            const searchInput = document.getElementById('search-input');
+            const query = searchInput.value.trim();
+            if (query) {
+                // Redirect to a new search results page
+                console.log(`Redirecting to search for: ${query}`);
+                // We'll create this "listing-search.html" page next
+                window.location.href = `listing-search.html?q=${encodeURIComponent(query)}`;
+            } else {
+                console.log("Empty search query, not redirecting.");
+            }
+        }
+
+        // 5. Run the initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+             console.log("DOM Content Loaded for index.html");
+             try {
+                 // 1. Load components (path prefix is './' for root)
+                 let headerLoaded = false;
+                 if (window.loadComponents) {
+                     headerLoaded = await window.loadComponents('./');
+                     console.log("Components loaded:", headerLoaded);
+                 } else { throw new Error("loadComponents not found"); }
+
+                 // 2. Wait for Firebase instances from app.js
+                 let attempts = 0;
+                 const maxAttempts = 20; // Wait up to 2 seconds
+                 while ((!window.firebaseAuthInstance) && !window.firebaseInitializationError && attempts < maxAttempts)
+                 {
+                     console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                     await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+                     attempts++;
+                 }
+
+                 if (window.firebaseInitializationError) {
+                     console.error("Firebase initialization failed:", window.firebaseInitializationError);
+                 }
+
+                 // 3. Run session logic AFTER header exists
+                 if (headerLoaded && window.runSessionLogic) {
+                     window.runSessionLogic('./');
+                 } else if (!headerLoaded) {
+                     console.error("Header did not load, session logic skipped.");
+                 } else { console.error("runSessionLogic not found"); }
+                 
+                 // 4. Set initial language
+                 if(window.setLang) {
+                     window.setLang(currentLang);
+                     console.log("Initial language set.");
+                 } else { console.error("setLang not found"); }
+                 
+                 // 5. NEW: Attach search listener
+                 const searchForm = document.getElementById('search-form');
+                 if (searchForm) {
+                     searchForm.addEventListener('submit', handleSearchSubmit);
+                 } else {
+                     console.error("Search form not found!");
+                 }
+                 
+             } catch(error) {
+                 console.error("Initialization error on index.html:", error);
+                 // Try setting language anyway
+                 if(window.setLang) window.setLang(currentLang);
+             }
+        });
+    </script>
+
+</body>
+</html>

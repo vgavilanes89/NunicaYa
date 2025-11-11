@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - Classes</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet (two levels up) -->
+    <link rel="stylesheet" href="../../style.css">
+
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    
+    <!-- Algolia Search Client -->
+    <script src="https://cdn.jsdelivr.net/npm/algoliasearch@4/dist/algoliasearch-lite.umd.js"></script>
+    
+    <!-- Load Costa Rica Location Data (two levels up) -->
+    <script src="../../locations-cr.js"></script>
+
+    <style>
+        /* Style for the favorite button */
+        .favorite-btn {
+            color: #9CA3AF;
+            /* gray-400 */
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .favorite-btn:hover {
+            color: #FBBF24;
+            /* amber-400 */
+        }
+
+        .favorite-btn.active {
+            color: #F59E0B;
+            /* amber-500 */
+            fill: #F59E0B;
+        }
+
+        /* --- NEW: View Toggle Styles --- */
+        .view-toggle-btn {
+            padding: 0.5rem;
+            border-radius: 0.375rem; /* rounded-md */
+            background-color: #F3F4F6; /* gray-100 */
+            color: #4B5563; /* gray-600 */
+            transition: all 0.2s;
+        }
+        .view-toggle-btn:hover {
+            background-color: #E5E7EB; /* gray-200 */
+        }
+        .view-toggle-btn.active {
+            background-color: #DBEAFE; /* blue-100 */
+            color: #1D4ED8; /* blue-700 */
+            font-weight: 600;
+        }
+
+        /* --- NEW: Listing View CSS --- */
+        
+        /* 1. List View (Small Image - Default) */
+        #listings-container.view-list .listing-item {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+        }
+        #listings-container.view-list .listing-image-wrapper {
+            width: 6rem; /* w-24 */
+            height: 6rem; /* h-24 */
+            flex-shrink: 0;
+            margin-right: 1rem;
+        }
+        #listings-container.view-list .listing-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        #listings-container.view-list .listing-details-wrapper {
+            flex-grow: 1;
+        }
+        #listings-container.view-list .listing-actions-wrapper {
+            flex-shrink: 0;
+            text-align: right;
+            margin-left: 1rem;
+        }
+
+        /* 2. Grid View (Big Image) */
+        #listings-container.view-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            padding: 1rem; /* Add padding to container */
+        }
+        #listings-container.view-grid .listing-item {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            overflow: hidden; /* To clip image corners */
+        }
+        #listings-container.view-grid .listing-image-wrapper {
+            width: 100%;
+            height: 175px;
+            flex-shrink: 0;
+            margin-right: 0;
+        }
+        #listings-container.view-grid .listing-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 0;
+        }
+        #listings-container.view-grid .listing-details-wrapper {
+            flex-grow: 1;
+            padding: 0.75rem;
+        }
+        #listings-container.view-grid .listing-actions-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            border-top: 1px solid #e5e7eb;
+            background-color: #F9FAFB; /* gray-50 */
+        }
+        #listings-container.view-grid .listing-date {
+            margin-top: 0;
+        }
+
+        /* 3. Compact View (Detail Only) */
+        #listings-container.view-compact .listing-item {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+        }
+        #listings-container.view-compact .listing-image-wrapper {
+            display: none; /* Hide image */
+        }
+        #listings-container.view-compact .listing-details-wrapper {
+            flex-grow: 1;
+        }
+        #listings-container.view-compact .listing-actions-wrapper {
+            flex-shrink: 0;
+            text-align: right;
+            margin-left: 1rem;
+        }
+        
+        /* --- NEW: Sleek Filter Styles --- */
+        .filter-select {
+            height: 2.5rem; /* h-10 */
+            font-size: 0.875rem; /* text-sm */
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        /* Style for disabled dropdowns */
+        .filter-select:disabled {
+            background-color: #F3F4F6; /* gray-100 */
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .filter-input {
+             height: 2.5rem; /* h-10 */
+             font-size: 0.875rem; /* text-sm */
+        }
+        .filter-btn {
+             height: 2.5rem; /* h-10 */
+             font-size: 0.875rem; /* text-sm */
+             padding-top: 0;
+             padding-bottom: 0;
+        }
+
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-6xl py-8">
+
+        <!-- Breadcrumbs and Title -->
+        <div class="mb-6">
+            <nav class="text-sm mb-2">
+                <a href="../../index.html" class="text-blue-700 hover:underline">
+                    <span class="lang-en">All CR</span>
+                    <span class="lang-es">Todo CR</span>
+                </a>
+                <span class="mx-2 text-gray-500">&gt;</span>
+                <span class="text-gray-700">
+                    <span class="lang-en">Community</span>
+                    <span class="lang-es">Comunidad</span>
+                </span>
+                <span class="mx-2 text-gray-500">&gt;</span>
+                <span class="text-gray-700">
+                    <span class="lang-en">Classes</span>
+                    <span class="lang-es">Clases</span>
+                </span>
+            </nav>
+            <h2 class="text-3xl font-bold">
+                <span class="lang-en">Classes</span>
+                <span class="lang-es">Clases</span>
+            </h2>
+        </div>
+
+        <!-- 
+        ============================================================
+        === UPDATED: Search and Filters (for Classes)            ===
+        ============================================================
+        -->
+        <div class="bg-white p-4 rounded-md shadow-sm border border-gray-200 mb-6">
+            <div class="flex flex-wrap gap-4 items-center">
+                <!-- Search Bar -->
+                <form class="flex-grow min-w-[200px]" onsubmit="event.preventDefault(); runSearch();">
+                    <input type="text" id="search-input" placeholder=""
+                        class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 filter-input">
+                </form>
+                <!-- NEW: Reset Button -->
+                <button id="reset-button" type="button" class="bg-gray-200 text-gray-700 p-2 px-4 rounded-md hover:bg-gray-300 filter-btn">
+                    <span class="lang-en">Reset</span>
+                    <span class="lang-es">Limpiar</span>
+                </button>
+                <button id="search-button" class="bg-blue-600 text-white p-2 px-4 rounded-md hover:bg-blue-700 filter-btn">
+                    <span class="lang-en">Search</span>
+                    <span class="lang-es">Buscar</span>
+                </button>
+            </div>
+            
+            <!-- Filter Dropdowns - 3 filters -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                <!-- Location Filters -->
+                <select id="filter-zone" class="p-2 border border-gray-300 rounded-md filter-select">
+                    <option value="" id="all-zones-option"></option>
+                    <!-- Populated by JS -->
+                </select>
+                <select id="filter-canton" class="p-2 border border-gray-300 rounded-md filter-select" disabled>
+                    <option value="" id="all-cantons-option"></option>
+                    <!-- Populated by JS -->
+                </select>
+                <select id="filter-district" class="p-2 border border-gray-300 rounded-md filter-select" disabled>
+                    <option value="" id="all-districts-option"></option>
+                    <!-- Populated by JS -->
+                </select>
+            </div>
+        </div>
+
+        <!-- 
+        ============================================================
+        === NEW: View Toggle Toolbar (from template)             ===
+        ============================================================
+        -->
+        <div class="flex justify-end items-center mb-4 space-x-2">
+            <span class="text-sm font-medium text-gray-700">
+                <span class="lang-en">View:</span>
+                <span class="lang-es">Vista:</span>
+            </span>
+            <button id="view-toggle-compact" class="view-toggle-btn" aria-label="Compact list view">
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+            </button>
+            <button id="view-toggle-list" class="view-toggle-btn" aria-label="List view with images">
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75v.007c0 .341-.001.68.002 1.014a2.25 2.25 0 01-.821 1.573l-1.066.979a.75.75 0 000 1.298l1.066.979a2.25 2.25 0 01.821 1.573c-.003.334-.004.673-.004 1.014v.007m1.5 0v.007a2.25 2.25 0 00.821 1.573l1.066.979a.75.75 0 010 1.298l-1.066.979a2.25 2.25 0 00-.821 1.573c.003.334.004.673.004 1.014v.007" />
+                </svg>
+            </button>
+            <button id="view-toggle-grid" class="view-toggle-btn" aria-label="Grid view">
+                <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 8.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 018.25 20.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+            </button>
+        </div>
+
+
+        <!-- Listings Section -->
+        <div class="bg-white rounded-md shadow-sm border border-gray-200">
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="text-xl font-semibold">
+                    <span class="lang-en">Listings</span>
+                    <span class="lang-es">Anuncios</span>
+                </h3>
+            </div>
+
+            <!-- MODIFIED: Container now has a view-list class by default -->
+            <div id="listings-container" class="divide-y divide-gray-200 view-list">
+                <div id="loading-msg" class="p-8 text-center text-gray-500">
+                    <span class="lang-en">Loading listings...</span>
+                    <span class="lang-es">Cargando anuncios...</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Simple Modal for login prompt (from template) -->
+    <div id="login-prompt-modal"
+        class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center"
+        style="display: none;">
+        <div class="bg-white p-6 rounded-md shadow-lg w-11/12 md:w-1/3">
+            <h3 class="text-lg font-medium leading-6 text-gray-900">
+                <span class="lang-en">Login Required</span>
+                <span class="lang-es">Se Requiere Iniciar Sesión</span>
+            </h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-500">
+                    <span class="lang-en">Please log in or create an account to save favorites.</span>
+                    <span class="lang-es">Por favor, inicie sesión o cree una cuenta para guardar favoritos.</span>
+                </p>
+            </div>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button type="button" id="close-modal-btn"
+                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                    <span class="lang-en">Cancel</span>
+                    <span class="lang-es">Cancelar</span>
+                </button>
+                <a href="../../my-account.html" id="modal-login-btn"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    <span class="lang-en">Login / Sign Up</span>
+                    <span class="lang-es">Ingresar / Crear Cuenta</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Main Application Script (Loads helper functions and initializes Firebase globally) -->
+    <script src="../../app.js"></script>
+
+    <!-- 
+    ============================================================
+    === PAGE-SPECIFIC SCRIPT (Rebuilt for Classes)           ===
+    ============================================================
+    -->
+    <script>
+        // --- 1. ALGOLIA CONFIG ---
+        const ALGOLIA_APP_ID = '14I0SKPECJ';
+        const ALGOLIA_SEARCH_KEY = '3cbf4626a13232dedec995e2b05ba86a';
+        const ALGOLIA_INDEX_NAME = 'listings'; // The index name
+
+        // Initialize Algolia client
+        let algoliaIndex;
+        if (ALGOLIA_APP_ID !== 'YOUR_APP_ID_HERE' && ALGOLIA_SEARCH_KEY !== 'YOUR_SEARCH_ONLY_KEY_HERE') {
+             const algoliaClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
+             algoliaIndex = algoliaClient.initIndex(ALGOLIA_INDEX_NAME);
+        } else {
+            console.error("ALGOLIA KEYS ARE NOT SET in classes.html");
+        }
+        
+        // --- 2. THIS PAGE'S STATIC CATEGORY ---
+        // *** THIS IS THE KEY CHANGE ***
+        const PAGE_SUB_CATEGORY = 'classes';
+        
+        // --- 3. Define page-specific text
+        const pageSpecificText = {
+            // *** UPDATED FOR THIS PAGE ***
+            'search-input': { en: 'Search classes...', es: 'Buscar clases...' },
+            // --- Location text ---
+            'all-zones-option': { en: 'All Provinces', es: 'Todas las Provincias' },
+            'all-cantons-option': { en: 'All Cantons', es: 'Todos los Cantones' },
+            'all-districts-option': { en: 'All Districts', es: 'Todos los Distritos' },
+            // *** Removed condition/type text ***
+        };
+
+        // 4. Default language & state
+        let currentLang = 'es';
+        let currentUserId = null; // Store logged-in user's ID
+        let favoriteIds = new Set(); // Store user's favorite listing IDs
+
+        // 5. Page Controls
+        const listingsContainer = document.getElementById('listings-container');
+        const loadingMsg = document.getElementById('loading-msg');
+        const searchButton = document.getElementById('search-button');
+        const searchInput = document.getElementById('search-input');
+        const resetButton = document.getElementById('reset-button');
+        
+        // --- Location filters ---
+        const filterZone = document.getElementById('filter-zone');
+        const filterCanton = document.getElementById('filter-canton');
+        const filterDistrict = document.getElementById('filter-district');
+        
+        const loginPromptModal = document.getElementById('login-prompt-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const modalLoginBtn = document.getElementById('modal-login-btn');
+
+        // --- View Toggle Elements ---
+        const viewToggleCompact = document.getElementById('view-toggle-compact');
+        const viewToggleList = document.getElementById('view-toggle-list');
+        const viewToggleGrid = document.getElementById('view-toggle-grid');
+        const allToggles = [viewToggleCompact, viewToggleList, viewToggleGrid];
+
+
+        // --- Firebase Instances (will be assigned from global scope) ---
+        let db = null;
+        let auth = null;
+
+        // 6. Override setLang (from template)
+        const originalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            currentLang = lang;
+            if (typeof originalSetLang === 'function') {
+                originalSetLang(lang, pageSpecificText);
+            }
+            rerenderTimestamps();
+            
+            // Also update modal text
+            loginPromptModal.querySelectorAll('.lang-en, .lang-es').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+            // Update listing titles
+             document.querySelectorAll('.listing-title').forEach(el => {
+                const titleEn = el.dataset.titleEn || el.dataset.titleEs;
+                const titleEs = el.dataset.titleEs || el.dataset.titleEn;
+                el.textContent = currentLang === 'es' ? titleEs : titleEn;
+             });
+             // Removed condition text update
+
+            // --- Repopulate location dropdowns on lang change ---
+            if (typeof costaRicaLocations !== 'undefined') {
+                const selectedZone = filterZone.value;
+                const selectedCanton = filterCanton.value;
+                const selectedDistrict = filterDistrict.value;
+                
+                populateProvinces();
+                filterZone.value = selectedZone;
+                
+                if (selectedZone) {
+                    populateCantons(selectedZone);
+                    filterCanton.value = selectedCanton;
+                }
+                if (selectedCanton) {
+                    populateDistricts(selectedZone, selectedCanton);
+                    filterDistrict.value = selectedDistrict;
+                }
+            }
+        };
+
+        function rerenderTimestamps() {
+            document.querySelectorAll('.listing-date').forEach(el => {
+                const timestampSeconds = parseInt(el.dataset.timestamp, 10);
+                if (!isNaN(timestampSeconds)) {
+                    el.textContent = new Date(timestampSeconds * 1000).toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US');
+                }
+            });
+        }
+
+        // 7. Page-specific API logic (from template)
+
+        // --- Fetch user favorites (Still needed from Firestore) ---
+        async function fetchUserFavorites(userId) {
+            if (!db || !userId) return new Set();
+            try {
+                const favoritesSnapshot = await db.collection("users").doc(userId).collection("favorites").get();
+                const ids = favoritesSnapshot.docs.map(doc => doc.id); // Get the doc ID, which *is* the listingId
+                return new Set(ids);
+            } catch (error) {
+                console.error("Error fetching user favorites:", error);
+                return new Set(); // Return empty set on error
+            }
+        }
+        
+        // ---
+        // ============================================================
+        // === Location Dropdown Functions (from template)        ===
+        // ============================================================
+        // ---
+
+        function populateProvinces() {
+            if (typeof costaRicaLocations === 'undefined') return;
+            const currentSelected = filterZone.value; // Use filterZone
+            filterZone.innerHTML = ''; // Clear existing
+            
+            const allOption = document.createElement('option');
+            allOption.value = "";
+            allOption.id = "all-zones-option"; // Set ID for language toggle
+            allOption.textContent = pageSpecificText['all-zones-option'][currentLang];
+            filterZone.appendChild(allOption);
+            
+            for (const provinceKey in costaRicaLocations) {
+                const province = costaRicaLocations[provinceKey];
+                const option = document.createElement('option');
+                option.value = provinceKey;
+                option.textContent = province.nombre;
+                filterZone.appendChild(option);
+            }
+            filterZone.value = currentSelected;
+        }
+
+        function populateCantons(provinceKey) {
+            if (typeof costaRicaLocations === 'undefined') return;
+            const currentSelected = filterCanton.value;
+            filterCanton.innerHTML = '';
+            
+            const allOption = document.createElement('option');
+            allOption.value = "";
+            allOption.id = "all-cantons-option";
+            allOption.textContent = pageSpecificText['all-cantons-option'][currentLang];
+            filterCanton.appendChild(allOption);
+
+            filterDistrict.innerHTML = `<option value="" id="all-districts-option">${pageSpecificText['all-districts-option'][currentLang]}</option>`;
+            filterDistrict.disabled = true;
+
+            if (!provinceKey || !costaRicaLocations[provinceKey]) {
+                filterCanton.disabled = true;
+                return;
+            }
+
+            const cantones = costaRicaLocations[provinceKey].cantones;
+            for (const cantonKey in cantones) {
+                const canton = cantones[cantonKey];
+                const option = document.createElement('option');
+                option.value = cantonKey;
+                option.textContent = canton.nombre;
+                filterCanton.appendChild(option);
+            }
+            filterCanton.disabled = false;
+            filterCanton.value = currentSelected;
+        }
+
+        function populateDistricts(provinceKey, cantonKey) {
+            if (typeof costaRicaLocations === 'undefined') return;
+            const currentSelected = filterDistrict.value;
+            filterDistrict.innerHTML = '';
+
+            const allOption = document.createElement('option');
+            allOption.value = "";
+            allOption.id = "all-districts-option";
+            allOption.textContent = pageSpecificText['all-districts-option'][currentLang];
+            filterDistrict.appendChild(allOption);
+
+            if (!provinceKey || !cantonKey || !costaRicaLocations[provinceKey]?.cantones[cantonKey]) {
+                filterDistrict.disabled = true;
+                return;
+            }
+
+            const distritos = costaRicaLocations[provinceKey].cantones[cantonKey].distritos;
+            distritos.forEach(distritoName => {
+                const option = document.createElement('option');
+                option.value = distritoName;
+                option.textContent = distritoName;
+                filterDistrict.appendChild(option);
+            });
+            filterDistrict.disabled = false;
+            filterDistrict.value = currentSelected;
+        }
+        // --- End Location Functions ---
+
+        // --- View Toggler Function (from template) ---
+        function applyView(view) {
+            listingsContainer.classList.remove('view-compact', 'view-list', 'view-grid');
+            listingsContainer.classList.add(view);
+            
+            allToggles.forEach(btn => btn.classList.remove('active'));
+            if (view === 'view-compact') {
+                viewToggleCompact.classList.add('active');
+            } else if (view === 'view-list') {
+                viewToggleList.classList.add('active');
+            } else if (view === 'view-grid') {
+                viewToggleGrid.classList.add('active');
+            }
+            
+            localStorage.setItem('nunciaya-listing-view', view);
+            
+            if (view === 'view-grid') {
+                listingsContainer.classList.remove('divide-y', 'divide-gray-200');
+            } else {
+                listingsContainer.classList.add('divide-y', 'divide-gray-200');
+            }
+        }
+
+        // --- Reset Filters Function (from template) ---
+        function resetFilters() {
+            console.log("Resetting filters...");
+            searchInput.value = "";
+            filterZone.value = "";
+            
+            // --- Removed other filters ---
+            
+            populateCantons(''); // Pass empty string to reset
+            populateDistricts('', ''); // Pass empty string to reset
+            filterCanton.value = "";
+            filterDistrict.value = "";
+
+            runSearch();
+        }
+
+
+        // --- Algolia search function (from template) ---
+        async function runSearch() {
+            if (!algoliaIndex) {
+                console.error("Algolia client not initialized. Check your API keys.");
+                handleApiError(new Error("Algolia client not initialized."));
+                return;
+            }
+            if (typeof costaRicaLocations === 'undefined') {
+                console.error("Location data not loaded, aborting search.");
+                handleApiError(new Error("Location data (location-cr.js) is missing."));
+                return;
+            }
+
+            console.log("Fetching listings from Algolia...");
+            loadingMsg.style.display = 'block';
+            listingsContainer.innerHTML = '';
+            listingsContainer.appendChild(loadingMsg);
+
+            // 1. Get search text
+            const searchText = searchInput.value;
+
+            // 2. Build filters
+            const filterParts = [];
+            
+            // *** THIS IS THE MOST IMPORTANT FILTER ***
+            filterParts.push(`subCategory:"${PAGE_SUB_CATEGORY}"`);
+            // ---
+            
+            const selectedZone = filterZone.value;
+            if (selectedZone) {
+                filterParts.push(`zone:"${selectedZone}"`);
+            }
+            
+            const selectedCanton = filterCanton.value;
+            if (selectedCanton) {
+                filterParts.push(`canton:"${selectedCanton}"`);
+            }
+
+            const selectedDistrict = filterDistrict.value;
+            if (selectedDistrict) {
+                filterParts.push(`district:"${selectedDistrict}"`);
+            }
+            
+            // *** Removed other filter logic ***
+            
+            // Only show active or pending ads
+            filterParts.push(`NOT status:"sold"`);
+
+            const filters = filterParts.join(' AND ');
+            console.log(`Algolia query: "${searchText}"`, `Filters: "${filters}"`);
+
+            try {
+                // 3. Perform Algolia search
+                const { hits } = await algoliaIndex.search(searchText, {
+                    filters: filters,
+                    hitsPerPage: 50
+                });
+                
+                console.log("Algolia hits found:", hits.length);
+                renderListings(hits);
+
+            } catch (error) {
+                console.error("Error fetching from Algolia:", error);
+                handleApiError(error);
+            }
+        }
+
+        /**
+         * Create Listing HTML (from template)
+         * Simplified for services
+         */
+        function createListingHTML(hit) {
+            const listing = hit; 
+            const listingId = hit.objectID;
+
+            const getPostDate = (timestampSeconds) => {
+                if (timestampSeconds) {
+                    return `<span data-timestamp="${timestampSeconds}">${new Date(timestampSeconds * 1000).toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US')}</span>`;
+                }
+                return currentLang === 'es' ? 'Fecha no disponible' : 'Date unavailable';
+            };
+
+            const price = listing.price || (currentLang === 'es' ? 'Consultar' : 'Ask');
+            const postDateHTML = getPostDate(listing.createdAtSeconds); 
+            
+            // Location Display
+            const locationString = (typeof costaRicaLocations !== 'undefined') ? 
+                [
+                    (listing.zone && listing.canton && listing.district) ? costaRicaLocations[listing.zone]?.cantones[listing.canton]?.distritos.find(d => d === listing.district) || listing.district : '',
+                    (listing.zone && listing.canton) ? costaRicaLocations[listing.zone]?.cantones[listing.canton]?.nombre || listing.canton : '',
+                    (listing.zone) ? costaRicaLocations[listing.zone]?.nombre || listing.zone : ''
+                ].filter(Boolean).join(', ') :
+                [listing.district, listing.canton, listing.zone].filter(Boolean).join(', '); // Fallback
+
+            const isFavorited = favoriteIds.has(listingId);
+            const activeClass = isFavorited ? 'active' : '';
+
+            const titleEn = listing.title_en || listing.title_es || 'Title not available';
+            const titleEs = listing.title_es || listing.title_en || 'Título no disponible';
+            const currentTitle = currentLang === 'es' ? titleEs : titleEn;
+
+            const placeholderUrl = `https://placehold.co/100x100/EEE/333?text=${currentLang === 'es' ? 'Clase' : 'Class'}`;
+            const imageUrl = (listing.imageUrls && listing.imageUrls.length > 0) ? listing.imageUrls[0] : placeholderUrl;
+
+            return `
+                <div class="listing-item p-4">
+                    <a href="../../pages/listing/detail.html?id=${listingId}" class="listing-image-wrapper">
+                        <img src="${imageUrl}" alt="Ad thumbnail" class="listing-image" onerror="this.src='${placeholderUrl}'">
+                    </a>
+                    
+                    <div class="listing-details-wrapper">
+                        <a href="../../pages/listing/detail.html?id=${listingId}" class="text-lg text-blue-700 hover:underline font-semibold block mb-1 listing-title" data-title-en="${titleEn}" data-title-es="${titleEs}">
+                            ${currentTitle}
+                        </a>
+                        <!-- Price is optional for services -->
+                        ${price ? `<p class="text-lg text-gray-800 font-bold mb-1 listing-price">${price}</p>` : ''}
+                        
+                        <p class="text-sm text-gray-600 listing-meta">
+                            ${locationString ? `<span>${locationString}</span>` : ''}
+                        </p>
+                    </div>
+                        
+                    <div class="listing-actions-wrapper">
+                        <button class="favorite-btn ${activeClass}" data-id="${listingId}" title="${currentLang === 'es' ? 'Guardar' : 'Save'}">
+                            <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118L2.98 10.099c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                            </svg>
+                        </button>
+                        <div class="text-sm text-gray-500 mt-2 listing-date">${postDateHTML}</div>
+                    </div>
+                </div>
+              `;
+        }
+
+        // Updated to take Algolia 'hits' (from template)
+        function renderListings(hits) {
+            loadingMsg.style.display = 'none';
+            listingsContainer.innerHTML = '';
+
+            if (!hits || hits.length === 0) {
+                listingsContainer.innerHTML = `<div class="p-8 text-center text-gray-500"><span class="lang-en">No listings found matching your criteria.</span><span class="lang-es">No se encontraron anuncios con sus criterios.</span></div>`;
+            } else {
+                hits.forEach(hit => {
+                    const template = document.createElement('template');
+                    template.innerHTML = createListingHTML(hit).trim();
+                    const listingEl = template.content.firstChild;
+                    listingsContainer.appendChild(listingEl);
+                });
+            }
+            if (typeof window.setLang === 'function') {
+                window.setLang(currentLang);
+            }
+        }
+
+        function handleApiError(error) {
+            console.error("API Error:", error);
+            loadingMsg.style.display = 'none';
+            listingsContainer.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error loading listings...</span><span class="lang-es">Error al cargar anuncios...</span></div>`;
+            if (typeof window.setLang === 'function') {
+                window.setLang(currentLang);
+            }
+        }
+
+        // --- Favorite Toggle Logic (from template) ---
+        async function handleFavoriteToggle(e) {
+            const button = e.target.closest('.favorite-btn');
+            if (!button) return; 
+
+            if (!currentUserId) { 
+                console.log("Anonymous user tried to favorite.");
+                loginPromptModal.style.display = 'flex';
+                if (window.setLang) window.setLang(currentLang);
+                return;
+            }
+
+            const listingId = button.dataset.id; // This is the objectID
+            if (!listingId) return;
+            
+            const favRef = db.collection("users").doc(currentUserId).collection("favorites").doc(listingId);
+
+            try {
+                if (button.classList.contains('active')) {
+                    // --- Un-favorite ---
+                    await favRef.delete();
+                    favoriteIds.delete(listingId);
+                    button.classList.remove('active');
+                    console.log("Removed from favorites:", listingId);
+                } else {
+                    // --- Favorite ---
+                    await favRef.set({
+                        addedAt: firebase.firestore.Timestamp.now(),
+                        listingId: listingId
+                    });
+                    favoriteIds.add(listingId);
+                    button.classList.add('active');
+                    console.log("Added to favorites:", listingId);
+                }
+            } catch (error) {
+                console.error("Error toggling favorite:", error);
+                alert(currentLang === 'es' ? 'Error al guardar favorito.' : 'Error saving favorite.');
+            }
+        }
+
+        // --- 8. Initialize Page on DOMContentLoaded (from template) ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log("DOM Content Loaded for classes.html (Algolia Version)");
+
+            if (typeof costaRicaLocations === 'undefined') {
+                console.error("CRITICAL: locations-cr.js did not load or 'costaRicaLocations' is not defined.");
+            }
+
+            try {
+                let headerLoaded = false;
+                if (window.loadComponents) {
+                    headerLoaded = await window.loadComponents('../../');
+                    console.log("Components loaded:", headerLoaded);
+                } else { throw new Error("loadComponents not found"); }
+
+                let attempts = 0;
+                const maxAttempts = 20;
+                while ((!window.firebaseAuthInstance || !window.firestoreDbInstance) && !window.firebaseInitializationError && attempts < maxAttempts) {
+                    console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                if (window.firebaseAuthInstance && window.firestoreDbInstance) {
+                    db = window.firestoreDbInstance;
+                    auth = window.firebaseAuthInstance;
+                    console.log("Firebase instances assigned for classes.");
+
+                    // --- REMOVED CarQuery Init ---
+
+                    // --- Add View Toggle Listeners ---
+                    viewToggleCompact.addEventListener('click', () => applyView('view-compact'));
+                    viewToggleList.addEventListener('click', () => applyView('view-list'));
+                    viewToggleGrid.addEventListener('click', () => applyView('view-grid'));
+
+                    // Add listeners for search/filter
+                    searchButton.addEventListener('click', runSearch);
+                    resetButton.addEventListener('click', resetFilters);
+                    
+                    // --- Location filter listeners ---
+                    filterZone.addEventListener('change', () => {
+                        populateCantons(filterZone.value);
+                        runSearch(); 
+                    });
+                    filterCanton.addEventListener('change', () => {
+                        populateDistricts(filterZone.value, filterCanton.value);
+                        runSearch();
+                    });
+                    filterDistrict.addEventListener('change', runSearch);
+                    // ---
+                    
+                    // *** Removed other filter listeners ***
+
+                    // Add favorite listener & modal controls
+                    listingsContainer.addEventListener('click', handleFavoriteToggle);
+                    closeModalBtn.addEventListener('click', () => loginPromptModal.style.display = 'none');
+                    
+                    // *** UPDATE modal login link path ***
+                    modalLoginBtn.href = `../../my-account.html?redirect=pages/community/classes.html`;
+
+
+                    if (headerLoaded && window.runSessionLogic) {
+                        window.runSessionLogic('../../');
+                    } else { console.error("Header/Session logic failed."); }
+
+                    if (window.setLang) {
+                        window.setLang(currentLang);
+                        console.log("Initial language set.");
+                    } else { console.error("setLang not found"); }
+
+                    // --- Populate initial province dropdown ---
+                    if (typeof costaRicaLocations !== 'undefined') {
+                        populateProvinces();
+                    } else {
+                        handleApiError(new Error("Location data (location-cr.js) is missing."));
+                        return; // Stop execution
+                    }
+
+                    if (!algoliaIndex) {
+                        handleApiError(new Error("Algolia not configured. API keys are missing."));
+                    }
+
+                    // --- Apply saved view preference ---
+                    const savedView = localStorage.getItem('nunciaya-listing-view') || 'view-list'; // Default to list view
+                    applyView(savedView);
+
+                    if (auth) {
+                        auth.onAuthStateChanged(async (user) => {
+                            if (!db) { return; }
+                            if (user) {
+                                console.log("User state changed:", user.uid, "Anonymous:", user.isAnonymous);
+                                if (!user.isAnonymous) {
+                                    // User is fully logged in
+                                    currentUserId = user.uid;
+                                    favoriteIds = await fetchUserFavorites(currentUserId);
+                                    console.log("Fetched user favorites:", favoriteIds);
+                                } else {
+                                    // User is anonymous
+                                    currentUserId = null;
+                                    favoriteIds = new Set();
+                                }
+                                // Fetch listings *after* knowing who user is (to show correct favs)
+                                await runSearch();
+                            } else {
+                                console.log("No user found. Signing in anonymously...");
+                                try {
+                                    await auth.signInAnonymously();
+                                    // Auth state will change again, triggering above block
+                                } catch (signInError) {
+                                    console.error("Anonymous sign-in failed:", signInError);
+                                    handleApiError(signInError);
+                                }
+                            }
+                        });
+                    } else {
+                        throw new Error("Auth instance is null after wait loop");
+                    }
+
+                } else {
+                    if (window.firebaseInitializationError) { throw new Error(`Firebase init failed earlier: ${window.firebaseInitializationError}`); }
+                    else { throw new Error("Firebase instances not available after delay."); }
+                }
+
+            } catch (error) {
+                console.error("Initialization error on classes page:", error);
+                handleApiError(error);
+                if (typeof window.setLang === 'function') window.setLang(currentLang);
+            }
+        });
+    </script>
+
+</body>
+
+</html>

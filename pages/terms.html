@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - Terms of Service</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet (one level up) -->
+    <link rel="stylesheet" href="../style.css">
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <style>
+        /* Add basic prose styling for readable text */
+        .prose-custom p,
+        .prose-custom li {
+            margin-bottom: 1rem;
+            line-height: 1.65;
+        }
+        .prose-custom h3 {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        .prose-custom ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-3xl py-8">
+        <div class="bg-white p-6 md:p-8 rounded-md shadow-sm border border-gray-200">
+            <h2 class="text-3xl font-bold mb-6">
+                <span class="lang-en">Terms of Service</span>
+                <span class="lang-es">Términos de Servicio</span>
+            </h2>
+
+            <div class="prose-custom text-gray-700">
+                <p>
+                    <span class="lang-en">Welcome to NunciaYa. By accessing or using our service, you agree to be bound by these terms. If you disagree with any part of the terms, you may not access the service.</span>
+                    <span class="lang-es">Bienvenido a NunciaYa. Al acceder o utilizar nuestro servicio, usted acepta estar sujeto a estos términos. Si no está de acuerdo con alguna parte de los términos, no podrá acceder al servicio.</span>
+                </p>
+
+                <h3>
+                    <span class="lang-en">User Accounts</span>
+                    <span class="lang-es">Cuentas de Usuario</span>
+                </h3>
+                <p>
+                    <span class="lang-en">When you create an account with us, you must provide information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the terms, which may result in immediate termination of your account on our service.</span>
+                    <span class="lang-es">Cuando crea una cuenta con nosotros, debe proporcionar información precisa, completa y actualizada en todo momento. El incumplimiento de esto constituye una violación de los términos, lo que puede resultar en la terminación inmediata de su cuenta en nuestro servicio.</span>
+                </p>
+
+                <h3>
+                    <span class="lang-en">Content</span>
+                    <span class="lang-es">Contenido</span>
+                </h3>
+                <ul>
+                    <li>
+                        <span class="lang-en">Our service allows you to post, link, store, share, and otherwise make available certain information, text, graphics, or other material ("Content"). You are responsible for the Content that you post on or through the service, including its legality, reliability, and appropriateness.</span>
+                        <span class="lang-es">Nuestro servicio le permite publicar, enlazar, almacenar, compartir y poner a disposición cierta información, texto, gráficos u otro material ("Contenido"). Usted es responsable del Contenido que publica en o a través del servicio, incluida su legalidad, confiabilidad y adecuación.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en">You may not post content that is illegal, fraudulent, misleading, offensive, or infringes on the rights of others. We reserve the right to remove any content that violates these terms.</span>
+                        <span class="lang-es">No puede publicar contenido que sea ilegal, fraudulento, engañoso, ofensivo o que infrinja los derechos de otros. Nos reservamos el derecho de eliminar cualquier contenido que viole estos términos.</span>
+                    </li>
+                </ul>
+
+                <h3>
+                    <span class="lang-en">Prohibited Uses</span>
+                    <span class="lang-es">Usos Prohibidos</span>
+                </h3>
+                <p>
+                    <span class="lang-en">You may use the service only for lawful purposes. You agree not to use the service for any purpose that is illegal, to solicit others to perform or participate in any unlawful acts, or to harass, abuse, or harm another person.</span>
+                    <span class="lang-es">Puede utilizar el servicio solo para fines lícitos. Usted acepta no utilizar el servicio para ningún propósito que sea ilegal, para solicitar a otros que realicen o participen en actos ilícitos, o para acosar, abusar o dañar a otra persona.</span>
+                </p>
+
+                <h3>
+                    <span class="lang-en">Disclaimer</span>
+                    <span class="lang-es">Descargo de Responsabilidad</span>
+                </h3>
+                <p>
+                    <span class="lang-en">Your use of the service is at your sole risk. The service is provided on an "AS IS" and "AS AVAILABLE" basis. We do not warrant that the service will be uninterrupted, secure, or error-free. NunciaYa is a platform and is not responsible for any transactions, interactions, or disputes between users.</span>
+                    <span class="lang-es">El uso del servicio es bajo su propio riesgo. El servicio se proporciona "TAL CUAL" y "SEGÚN DISPONIBILIDAD". No garantizamos que el servicio será ininterrumpido, seguro o libre de errores. NunciaYa es una plataforma y no es responsable de ninguna transacción, interacción o disputa entre usuarios.</span>
+                </p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Main Application Script -->
+    <script src="../app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // 1. Define page-specific text 
+        // (This page doesn't have any, but we keep the structure)
+        const pageSpecificText = {};
+        
+        // 2. Default language
+        let currentLang = 'es';
+
+        // 3. Re-assign the global setLang function
+        const globalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            if (lang) {
+                currentLang = lang;
+            }
+            // Call the global function from app.js
+            // It will handle the header, footer, and all .lang-en/.lang-es spans
+            if (globalSetLang) {
+                globalSetLang(currentLang, pageSpecificText);
+            }
+        };
+
+        // 4. Run the initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+             console.log("DOM Content Loaded for terms.html");
+             try {
+                // 1. Load components (path prefix is '../' for nested page)
+                let headerLoaded = false;
+                if (window.loadComponents) {
+                     headerLoaded = await window.loadComponents('../');
+                     console.log("Components loaded:", headerLoaded);
+                } else { throw new Error("loadComponents not found"); }
+
+                // 2. Wait for Firebase instances
+                let attempts = 0;
+                while ((!window.firebaseAuthInstance) && !window.firebaseInitializationError && attempts < 20) {
+                    console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                // 3. Run session logic
+                if (headerLoaded && window.runSessionLogic) {
+                    window.runSessionLogic('../');
+                } else { console.error("Header/Session logic failed."); }
+                
+                // 4. Set initial language
+                if(window.setLang) {
+                    window.setLang(currentLang);
+                    console.log("Initial language set.");
+                } else { console.error("setLang not found"); }
+                
+             } catch(error) {
+                 console.error("Initialization error on terms.html:", error);
+                 if(window.setLang) window.setLang(currentLang);
+             }
+        });
+    </script>
+
+</body>
+</html>

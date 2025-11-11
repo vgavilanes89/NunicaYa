@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - Privacy Policy</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet (one level up) -->
+    <link rel="stylesheet" href="../style.css">
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <style>
+        /* Add basic prose styling for readable text */
+        .prose-custom p,
+        .prose-custom li {
+            margin-bottom: 1rem;
+            line-height: 1.65;
+        }
+        .prose-custom h3 {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        .prose-custom ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-3xl py-8">
+        <div class="bg-white p-6 md:p-8 rounded-md shadow-sm border border-gray-200">
+            <h2 class="text-3xl font-bold mb-6">
+                <span class="lang-en">Privacy Policy</span>
+                <span class="lang-es">Política de Privacidad</span>
+            </h2>
+
+            <div class="prose-custom text-gray-700">
+                <p>
+                    <span class="lang-en">Your privacy is important to us. This Privacy Policy explains how NunciaYa collects, uses, and protects your personal information.</span>
+                    <span class="lang-es">Su privacidad es importante para nosotros. Esta Política de Privacidad explica cómo NunciaYa recopila, usa y protege su información personal.</span>
+                </p>
+
+                <h3>
+                    <span class="lang-en">Information We Collect</span>
+                    <span class="lang-es">Información que Recopilamos</span>
+                </h3>
+                <ul>
+                    <li>
+                        <span class="lang-en"><strong>Account Information:</strong> When you register, we collect your name, email address, and phone number.</span>
+                        <span class="lang-es"><strong>Información de Cuenta:</strong> Cuando se registra, recopilamos su nombre, dirección de correo electrónico y número de teléfono.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en"><strong>Ad Content:</strong> We store the information you provide for your listings, including titles, descriptions, images, and contact preferences.</span>
+                        <span class="lang-es"><strong>Contenido de Anuncios:</strong> Almacenamos la información que proporciona para sus anuncios, incluyendo títulos, descripciones, imágenes y preferencias de contacto.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en"><strong>User Reports:</strong> If you report an ad or user, we collect the information you provide about the incident.</span>
+                        <span class="lang-es"><strong>Reportes de Usuarios:</strong> Si reporta un anuncio o usuario, recopilamos la información que proporciona sobre el incidente.</span>
+                    </li>
+                </ul>
+
+                <h3>
+                    <span class="lang-en">How We Use Your Information</span>
+                    <span class="lang-es">Cómo Usamos Su Información</span>
+                </h3>
+                <ul>
+                    <li>
+                        <span class="lang-en"><strong>To provide our service:</strong> To display your ads, allow users to contact you based on your preferences, and manage your account.</span>
+                        <span class="lang-es"><strong>Para proveer nuestro servicio:</strong> Para mostrar sus anuncios, permitir que los usuarios lo contacten según sus preferencias y administrar su cuenta.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en"><strong>For safety and security:</strong> To investigate reports of fraud, spam, or illegal activity and to protect our community.</span>
+                        <span class="lang-es"><strong>Por seguridad:</strong> Para investigar reportes de fraude, spam o actividad ilegal y para proteger a nuestra comunidad.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en"><strong>To improve our platform:</strong> We analyze how users interact with our site to fix bugs and build new features.</span>
+                        <span class="lang-es"><strong>Para mejorar nuestra plataforma:</strong> Analizamos cómo los usuarios interactúan con nuestro sitio para corregir errores y desarrollar nuevas funciones.</span>
+                    </li>
+                </ul>
+
+                <h3>
+                    <span class="lang-en">Information We Do Not Share</span>
+                    <span class="lang-es">Información que No Compartimos</span>
+                </h3>
+                <p>
+                    <span class="lang-en">We do not sell your personal information to third parties. We will only share information if required by law or to protect the safety of our users. Your contact details (phone, email) are only shown on your ads if you explicitly choose to show them via your "Preferred Contact Method(s)" when posting.</span>
+                    <span class="lang-es">No vendemos su información personal a terceros. Solo compartiremos información si es requerido por ley o para proteger la seguridad de nuestros usuarios. Sus detalles de contacto (teléfono, correo) solo se muestran en sus anuncios si usted explícitamente elige mostrarlos a través de sus "Método(s) de Contacto Preferido(s)" al publicar.</span>
+                </p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Main Application Script -->
+    <script src="../app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // 1. Define page-specific text 
+        // (This page doesn't have any, but we keep the structure)
+        const pageSpecificText = {};
+        
+        // 2. Default language
+        let currentLang = 'es';
+
+        // 3. Re-assign the global setLang function
+        const globalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            if (lang) {
+                currentLang = lang;
+            }
+            // Call the global function from app.js
+            // It will handle the header, footer, and all .lang-en/.lang-es spans
+            if (globalSetLang) {
+                globalSetLang(currentLang, pageSpecificText);
+            }
+        };
+
+        // 4. Run the initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+             console.log("DOM Content Loaded for privacy.html");
+             try {
+                // 1. Load components (path prefix is '../' for nested page)
+                let headerLoaded = false;
+                if (window.loadComponents) {
+                     headerLoaded = await window.loadComponents('../');
+                     console.log("Components loaded:", headerLoaded);
+                } else { throw new Error("loadComponents not found"); }
+
+                // 2. Wait for Firebase instances
+                let attempts = 0;
+                while ((!window.firebaseAuthInstance) && !window.firebaseInitializationError && attempts < 20) {
+                    console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                // 3. Run session logic
+                if (headerLoaded && window.runSessionLogic) {
+                    window.runSessionLogic('../');
+                } else { console.error("Header/Session logic failed."); }
+                
+                // 4. Set initial language
+                if(window.setLang) {
+                    window.setLang(currentLang);
+                    console.log("Initial language set.");
+                } else { console.error("setLang not found"); }
+                
+             } catch(error) {
+                 console.error("Initialization error on privacy.html:", error);
+                 if(window.setLang) window.setLang(currentLang);
+             }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - Safety</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet (one level up) -->
+    <link rel="stylesheet" href="../style.css">
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <style>
+        /* Add basic prose styling for readable text */
+        .prose-custom p,
+        .prose-custom li {
+            margin-bottom: 1rem;
+            line-height: 1.65;
+        }
+        .prose-custom h3 {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        .prose-custom ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-3xl py-8">
+        <div class="bg-white p-6 md:p-8 rounded-md shadow-sm border border-gray-200">
+            <h2 class="text-3xl font-bold mb-6">
+                <span class="lang-en">Safety Tips</span>
+                <span class="lang-es">Consejos de Seguridad</span>
+            </h2>
+
+            <div class="prose-custom text-gray-700">
+                <p>
+                    <span class="lang-en">Your safety is our priority. Follow these guidelines to help ensure a secure and positive experience on NunciaYa.</span>
+                    <span class="lang-es">Su seguridad es nuestra prioridad. Siga estas guías para ayudar a asegurar una experiencia positiva y segura en NunciaYa.</span>
+                </p>
+
+                <h3>
+                    <span class="lang-en">Meeting in Person</span>
+                    <span class="lang-es">Encuentros en Persona</span>
+                </h3>
+                <ul>
+                    <li>
+                        <span class="lang-en"><strong>Meet in public places.</strong> Always choose a well-lit, public location to meet, such as a coffee shop, bank lobby, or police station parking lot.</span>
+                        <span class="lang-es"><strong>Reúnase en lugares públicos.</strong> Siempre elija un lugar público y bien iluminado, como una cafetería, el vestíbulo de un banco o el estacionamiento de una estación de policía.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en"><strong>Bring a friend.</strong> Whenever possible, do not go alone. Tell someone where you are going and who you are meeting.</span>
+                        <span class="lang-es"><strong>Lleve a un amigo.</strong> Siempre que sea posible, no vaya solo. Dígale a alguien a dónde va y con quién se reunirá.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en"><strong>Inspect the item.</strong> For items being sold, inspect it thoroughly before paying. For services, clarify all details and costs upfront.</span>
+                        <span class="lang-es"><strong>Inspeccione el artículo.</strong> Para artículos en venta, inspecciónelos a fondo antes de pagar. Para servicios, aclare todos los detalles y costos por adelantado.</span>
+                    </li>
+                </ul>
+
+                <h3>
+                    <span class="lang-en">Avoiding Scams</span>
+                    <span class="lang-es">Evitando Estafas</span>
+                </h3>
+                <ul>
+                    <li>
+                        <span class="lang-en"><strong>Deal locally.</strong> Be wary of offers that involve shipping or complex payment methods. Dealing with local people you can meet in person is safest.</span>
+                        <span class="lang-es"><strong>Trate localmente.</strong> Tenga cuidado con ofertas que involucren envíos o métodos de pago complejos. Tratar con personas locales que pueda conocer en persona es lo más seguro.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en"><strong>Never wire money.</strong> Do not use services like Western Union, MoneyGram, or SINPE Móvil with people you don't know. Cash is often best for in-person transactions.</span>
+                        <span class="lang-es"><strong>Nunca transfiera dinero.</strong> No use servicios como Western Union, MoneyGram o SINPE Móvil con personas que no conoce. El efectivo suele ser lo mejor para transacciones en persona.</span>
+                    </li>
+                    <li>
+                        <span class="lang-en"><strong>Beware of "too good to be true" offers.</strong> Unrealistic prices, sob stories, or urgent requests to pay are common red flags for scams.</span>
+                        <span class="lang-es"><strong>Cuidado con las ofertas "demasiado buenas para ser verdad".</strong> Precios irreales, historias tristes o solicitudes urgentes de pago son señales de alerta comunes de estafas.</span>
+                    </li>
+                     <li>
+                        <span class="lang-en"><strong>We will never ask for your password.</strong> NunciaYa will never email you asking for your password or personal login details.</span>
+                        <span class="lang-es"><strong>Nunca le pediremos su contraseña.</strong> NunciaYa nunca le enviará un correo electrónico pidiendo su contraseña o detalles de inicio de sesión.</span>
+                    </li>
+                </ul>
+
+                <h3>
+                    <span class="lang-en">Report Suspicious Activity</span>
+                    <span class="lang-es">Reporte Actividad Sospechosa</span>
+                </h3>
+                <p>
+                    <span class="lang-en">If you see an ad that looks like a scam or violates our policies, please use the "Report this Ad" button on the listing page. If you need further help, please visit our <a href="./contact-help.html" class="text-blue-700 hover:underline">Help & Contact page</a>.</span>
+                    <span class="lang-es">Si ve un anuncio que parece una estafa o viola nuestras políticas, por favor use el botón "Reportar este Anuncio" en la página del anuncio. Si necesita más ayuda, visite nuestra <a href="./contact-help.html" class="text-blue-700 hover:underline">página de Ayuda y Contacto</a>.</span>
+                </p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Main Application Script -->
+    <script src="../app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // 1. Define page-specific text 
+        // (This page doesn't have any, but we keep the structure)
+        const pageSpecificText = {};
+        
+        // 2. Default language
+        let currentLang = 'es';
+
+        // 3. Re-assign the global setLang function
+        const globalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            if (lang) {
+                currentLang = lang;
+            }
+            // Call the global function from app.js
+            // It will handle the header, footer, and all .lang-en/.lang-es spans
+            if (globalSetLang) {
+                globalSetLang(currentLang, pageSpecificText);
+            }
+        };
+
+        // 4. Run the initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+             console.log("DOM Content Loaded for safety.html");
+             try {
+                // 1. Load components (path prefix is '../' for nested page)
+                let headerLoaded = false;
+                if (window.loadComponents) {
+                     headerLoaded = await window.loadComponents('../');
+                     console.log("Components loaded:", headerLoaded);
+                } else { throw new Error("loadComponents not found"); }
+
+                // 2. Wait for Firebase instances
+                let attempts = 0;
+                while ((!window.firebaseAuthInstance) && !window.firebaseInitializationError && attempts < 20) {
+                    console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                // 3. Run session logic
+                if (headerLoaded && window.runSessionLogic) {
+                    window.runSessionLogic('../');
+                } else { console.error("Header/Session logic failed."); }
+                
+                // 4. Set initial language
+                if(window.setLang) {
+                    window.setLang(currentLang);
+                    console.log("Initial language set.");
+                } else { console.error("setLang not found"); }
+                
+             } catch(error) {
+                 console.error("Initialization error on safety.html:", error);
+                 if(window.setLang) window.setLang(currentLang);
+             }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - Listing Details</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet (two levels up) -->
+    <link rel="stylesheet" href="../../style.css">
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+
+    <!-- NEW: Added style for gallery buttons -->
+    <style>
+        .gallery-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.3);
+            color: white;
+            border-radius: 9999px;
+            /* rounded-full */
+            width: 2.5rem;
+            /* w-10 */
+            height: 2.5rem;
+            /* h-10 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            z-index: 10;
+        }
+
+        .gallery-btn:hover {
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+
+        .gallery-btn.left {
+            left: 0.75rem;
+            /* left-3 */
+        }
+
+        .gallery-btn.right {
+            right: 0.75rem;
+            /* right-3 */
+        }
+
+        #thumbnail-strip img.active-thumb {
+            border-color: #2563EB;
+            /* blue-600 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-4xl py-8">
+
+        <!-- Breadcrumbs -->
+        <nav class="text-sm mb-4">
+            <a href="../../index.html" class="text-blue-700 hover:underline">
+                <span class="lang-en">All CR</span>
+                <span class="lang-es">Todo CR</span>
+            </a>
+            <span class="mx-2 text-gray-500">&gt;</span>
+            <!-- Category name will be loaded by JS -->
+            <a href="#" id="breadcrumb-category" class="text-blue-700 hover:underline">
+                <span class="lang-en">Category</span>
+                <span class="lang-es">Categoría</span>
+            </a>
+            <span class="mx-2 text-gray-500">&gt;</span>
+            <!-- Sub-category name will be loaded by JS -->
+            <a href="#" id="breadcrumb-subcategory" class="text-blue-700 hover:underline">
+                <span class="lang-en">Sub-Category</span>
+                <span class="lang-es">Subcategoría</span>
+            </a>
+        </nav>
+
+        <!-- Listing Detail Area -->
+        <div class="bg-white rounded-md shadow-sm border border-gray-200">
+            <!-- Loading Message -->
+            <div id="loading-msg" class="p-8 text-center text-gray-500">
+                <span class="lang-en">Loading ad details...</span>
+                <span class="lang-es">Cargando detalles del anuncio...</span>
+            </div>
+
+            <!-- Content will be populated here -->
+            <article id="listing-content" class="hidden">
+
+                <!-- Image Gallery (NEW: Updated with buttons) -->
+                <div id="image-gallery"
+                    class="relative bg-gray-200 rounded-t-md flex justify-center items-center min-h-[300px] md:min-h-[400px]">
+
+                    <!-- NEW: SOLD Banner -->
+                    <div id="sold-banner"
+                        class="absolute top-4 left-4 bg-red-600 text-white text-lg font-bold px-6 py-2 rounded-md shadow-lg"
+                        style="display: none; z-index: 20;">
+                        <span class="lang-en">SOLD</span>
+                        <span class="lang-es">VENDIDO</span>
+                    </div>
+
+                    <!-- Main image shown here -->
+                    <img id="main-image" src="" alt="Listing image"
+                        class="max-w-full max-h-[400px] object-contain rounded">
+
+                    <!-- Prev Button -->
+                    <button id="prev-image-btn" class="gallery-btn left hidden">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <!-- Next Button -->
+                    <button id="next-image-btn" class="gallery-btn right hidden">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+                <!-- Thumbnail strip -->
+                <div id="thumbnail-strip" class="flex space-x-2 p-2 bg-gray-100 overflow-x-auto hidden">
+                    <!-- Thumbnails loaded by JS -->
+                </div>
+
+                <!-- Main Details -->
+                <div class="p-6">
+                    <!-- Header: Title & Price -->
+                    <div class="flex flex-col md:flex-row justify-between items-start mb-4">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2 md:mb-0">
+                            <span id="listing-title-en" class="lang-en"></span>
+                            <span id="listing-title-es" class="lang-es"></span>
+                        </h1>
+                        <div class="flex-shrink-0 md:ml-6 text-right">
+                            <span id="listing-price" class="text-3xl font-bold text-blue-700 block"></span>
+                            <!-- Currency Toggle -->
+                            <div class="text-sm mt-1">
+                                <button id="currency-usd-btn"
+                                    class="font-bold text-blue-700 opacity-50 hover:opacity-100"
+                                    onclick="setCurrency('usd')">USD</button>
+                                <span class="mx-1 text-gray-400">/</span>
+                                <button id="currency-crc-btn"
+                                    class="font-bold text-blue-700 opacity-50 hover:opacity-100"
+                                    onclick="setCurrency('crc')">CRC</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Meta Info: Date, Zone -->
+                    <div class="flex flex-wrap text-sm text-gray-600 mb-6 border-b pb-4">
+                        <div class="mr-6 mb-2">
+                            <strong><span class="lang-en">Posted:</span><span class="lang-es">Publicado:</span></strong>
+                            <span id="listing-date" class="ml-2"></span>
+                        </div>
+                        <div class="mr-6 mb-2">
+                            <strong><span class="lang-en">Zone:</span><span class="lang-es">Zona:</span></strong>
+                            <span id="listing-zone" class="ml-2 capitalize"></span>
+                        </div>
+                        <!-- Dynamic details (rooms, baths, etc.) -->
+                        <div id="dynamic-details" class="flex flex-wrap">
+                            <!-- Content (e.g., Rooms, Baths) added by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <h3 class="text-xl font-semibold mb-2">
+                        <span class="lang-en">Description</span>
+                        <span class="lang-es">Descripción</span>
+                    </h3>
+                    <div class="prose max-w-none text-gray-700">
+                        <p id="listing-description-en" class="lang-en whitespace-pre-wrap"></p>
+                        <p id="listing-description-es" class="lang-es whitespace-pre-wrap"></p>
+                    </div>
+
+                    <!-- 
+                    ============================================================
+                    === UPDATED: Contact Info Section                        ===
+                    ============================================================
+                    -->
+                    <div id="contact-section" class="border-t mt-6 pt-6">
+                        <h3 class="text-xl font-semibold mb-4">
+                            <span class="lang-en">Contact Seller</span>
+                            <span class="lang-es">Contactar al Vendedor</span>
+                        </h3>
+                        <div class="space-y-3">
+                            <!-- NEW: Seller Name -->
+                            <div id="contact-seller-name" class="hidden items-center">
+                                <svg class="w-5 h-5 text-gray-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A1.125 1.125 0 0118 19.5h-12a1.125 1.125 0 01-1.499.618z" />
+                                </svg>
+                                <strong><span class="lang-en">Seller:</span><span
+                                        class="lang-es">Vendedor:</span></strong>
+                                <span id="listing-seller-name" class="ml-2 text-gray-800 font-medium"></span>
+                            </div>
+                            <!-- Phone -->
+                            <div id="contact-phone" class="hidden items-center">
+                                <svg class="w-5 h-5 text-gray-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.822-1.423-5.145-3.746-6.568-6.568l1.293-.97a1.125 1.125 0 00.417-1.173L6.837 3.939a1.125 1.125 0 00-1.09 -.852H4.5A2.25 2.25 0 002.25 6.75z" />
+                                </svg>
+                                <strong><span class="lang-en">Phone:</span><span
+                                        class="lang-es">Teléfono:</span></strong>
+                                <a href="" id="contact-phone-link" class="ml-2 text-blue-700 hover:underline"></a>
+                            </div>
+
+                            <!-- WhatsApp -->
+                            <div id="contact-whatsapp" class="hidden items-center">
+                                <svg class="w-5 h-5 text-gray-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m3.75 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M6.375 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m3.75 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M6 16.125a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m3.75 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5-9a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3h-12a3 3 0 01-3-3v-12z" />
+                                </svg>
+                                <strong>WhatsApp:</strong>
+                                <a href="" id="contact-whatsapp-link" target="_blank" rel="noopener noreferrer"
+                                    class="ml-2 text-blue-700 hover:underline"></a>
+                            </div>
+
+                            <!-- Email -->
+                            <div id="contact-email" class="hidden items-center">
+                                <svg class="w-5 h-5 text-gray-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                </svg>
+                                <strong><span class="lang-en">Email:</span><span class="lang-es">Correo:</span></strong>
+                                <a href="" id="contact-email-link" class="ml-2 text-blue-700 hover:underline"></a>
+                            </div>
+
+                            <!-- No contact info message -->
+                            <div id="no-contact-info" class="hidden">
+                                <p class="text-gray-500">
+                                    <span class="lang-en">The seller has not provided a contact method.</span>
+                                    <span class="lang-es">El vendedor no ha proporcionado un método de contacto.</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NEW: Sold Message (replaces contact section) -->
+                    <div id="sold-message" class="border-t mt-6 pt-6" style="display: none;">
+                        <p class="text-lg text-gray-700 font-semibold">
+                            <span class="lang-en">This item has been sold.</span>
+                            <span class="lang-es">Este artículo ha sido vendido.</span>
+                        </p>
+                    </div>
+
+                    <!-- 
+                    ============================================================
+                    === NEW: Flag Post Button                                ===
+                    ============================================================
+                    -->
+                    <div class="border-t mt-6 pt-4 text-center">
+                        <button id="flag-post-btn" class="text-sm text-gray-500 hover:text-red-600 hover:underline">
+                            <span class="lang-en">Report this Ad</span>
+                            <span class="lang-es">Reportar este Anuncio</span>
+                        </button>
+                        <p id="flag-post-success" class="text-sm text-green-600" style="display: none;">
+                            <span class="lang-en">Report submitted. Thank you.</span>
+                            <span class="lang-es">Reporte enviado. Gracias.</span>
+                        </p>
+                    </div>
+
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- 
+    ============================================================
+    === NEW: Report Ad Modal                                 ===
+    ============================================================
+    -->
+    <div id="report-ad-modal"
+        class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center"
+        style="display: none;">
+        <div class="bg-white p-6 rounded-md shadow-lg w-11/12 md:w-1/3">
+            <h3 class="text-lg font-medium leading-6 text-gray-900">
+                <span class="lang-en">Report this Ad</span>
+                <span class="lang-es">Reportar este Anuncio</span>
+            </h3>
+            <div class="mt-4">
+                <p class="text-sm text-gray-500">
+                    <span class="lang-en">Why are you reporting this ad?</span>
+                    <span class="lang-es">¿Por qué reporta este anuncio?</span>
+                </p>
+                <div id="report-reason-group" class="mt-2 space-y-2">
+                    <div class="flex items-center">
+                        <input type="radio" name="report-reason" id="reason-spam" value="spam"
+                            class="h-4 w-4 text-blue-600 border-gray-300">
+                        <label for="reason-spam" class="ml-3 block text-sm text-gray-900"><span class="lang-en">Spam /
+                                Repost</span><span class="lang-es">Spam / Repetido</span></label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="radio" name="report-reason" id="reason-fraud" value="fraud"
+                            class="h-4 w-4 text-blue-600 border-gray-300">
+                        <label for="reason-fraud" class="ml-3 block text-sm text-gray-900"><span class="lang-en">Fraud /
+                                Scam</span><span class="lang-es">Fraude / Estafa</span></label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="radio" name="report-reason" id="reason-illegal" value="illegal"
+                            class="h-4 w-4 text-blue-600 border-gray-300">
+                        <label for="reason-illegal" class="ml-3 block text-sm text-gray-900"><span
+                                class="lang-en">Illegal / Prohibited Item</span><span class="lang-es">Ilegal / Artículo
+                                Prohibido</span></label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="radio" name="report-reason" id="reason-wrong-category" value="wrong-category"
+                            class="h-4 w-4 text-blue-600 border-gray-300">
+                        <label for="reason-wrong-category" class="ml-3 block text-sm text-gray-900"><span
+                                class="lang-en">Wrong Category</span><span class="lang-es">Categoría
+                                Incorrecta</span></label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="radio" name="report-reason" id="reason-other" value="other"
+                            class="h-4 w-4 text-blue-600 border-gray-300">
+                        <label for="reason-other" class="ml-3 block text-sm text-gray-900"><span
+                                class="lang-en">Other</span><span class="lang-es">Otro</span></label>
+                    </div>
+                </div>
+                <p id="report-error-msg" class="text-red-600 text-sm mt-2" style="display: none;"></p>
+            </div>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button type="button" id="cancel-report-btn"
+                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                    <span class="lang-en">Cancel</span>
+                    <span class="lang-es">Cancelar</span>
+                </button>
+                <button type="button" id="submit-report-btn"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                    <span class="lang-en">Submit Report</span>
+                    <span class="lang-es">Enviar Reporte</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Application Script (Loads helper functions and initializes Firebase globally) -->
+    <script src="../../app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // 1. Page Elements
+        const loadingMsg = document.getElementById('loading-msg');
+        const listingContent = document.getElementById('listing-content');
+        const mainImage = document.getElementById('main-image');
+        const thumbnailStrip = document.getElementById('thumbnail-strip');
+        const listingTitleEn = document.getElementById('listing-title-en');
+        const listingTitleEs = document.getElementById('listing-title-es');
+        const listingPrice = document.getElementById('listing-price');
+        const listingDate = document.getElementById('listing-date');
+        const listingZone = document.getElementById('listing-zone');
+        const dynamicDetails = document.getElementById('dynamic-details');
+        const listingDescriptionEn = document.getElementById('listing-description-en');
+        const listingDescriptionEs = document.getElementById('listing-description-es');
+
+        // --- UPDATED: Contact Elements ---
+        const contactSection = document.getElementById('contact-section');
+        const contactPhone = document.getElementById('contact-phone');
+        const contactPhoneLink = document.getElementById('contact-phone-link');
+        const contactEmail = document.getElementById('contact-email');
+        const contactEmailLink = document.getElementById('contact-email-link');
+        const contactWhatsApp = document.getElementById('contact-whatsapp');
+        const contactWhatsAppLink = document.getElementById('contact-whatsapp-link');
+        const noContactInfo = document.getElementById('no-contact-info');
+        // --- NEW: Seller Name Elements ---
+        const contactSellerNameContainer = document.getElementById('contact-seller-name');
+        const contactSellerName = document.getElementById('listing-seller-name');
+        // --- NEW: Sold Message Element ---
+        const soldMessage = document.getElementById('sold-message');
+        // --- NEW: Sold Message Element ---
+
+
+        const breadcrumbCategory = document.getElementById('breadcrumb-category');
+        const breadcrumbSubCategory = document.getElementById('breadcrumb-subcategory');
+        const currencyUsdBtn = document.getElementById('currency-usd-btn');
+        const currencyCrcBtn = document.getElementById('currency-crc-btn');
+
+        // --- NEW: Gallery Elements ---
+        const prevImageBtn = document.getElementById('prev-image-btn');
+        const nextImageBtn = document.getElementById('next-image-btn');
+        let currentImageIndex = 0;
+        let adImageUrls = [];
+
+        // --- NEW: Report Modal Elements ---
+        const flagPostBtn = document.getElementById('flag-post-btn');
+        const flagPostSuccess = document.getElementById('flag-post-success');
+        const reportAdModal = document.getElementById('report-ad-modal');
+        const cancelReportBtn = document.getElementById('cancel-report-btn');
+        const submitReportBtn = document.getElementById('submit-report-btn');
+        const reportErrorMsg = document.getElementById('report-error-msg');
+        let currentListingId = null; // Will be set on load
+        let currentListingOwnerId = null; // Will be set on load
+
+        // --- NEW: Sold Banner Element ---
+        const soldBanner = document.getElementById('sold-banner');
+
+        let currentLang = 'es';
+        let db;
+        let auth;
+
+        // --- Currency Conversion ---
+        const USD_TO_CRC_RATE = 500; // Mock rate
+        let basePriceUSD = 0; // Store the price in USD
+        let currentCurrency = 'crc'; // Default currency
+
+        // --- (NEW) Category Data (for breadcrumbs) ---
+        const categoryData = {
+            housing: {
+                en: "Housing", es: "Vivienda", subCategories: {
+                    apartments: { en: "Apartments / Housing", es: "Apartamentos / Casas" },
+                    rentalsWanted: { en: "Rentals Wanted", es: "Busco Alquiler" },
+                    roomsShared: { en: "Rooms / Shared", es: "Cuartos / Compartido" },
+                    sublets: { en: "Sublets / Temporary", es: "Subarriendo / Temporal" },
+                    realEstate: { en: "Real Estate for Sale", es: "Bienes Raíces Venta" },
+                    vacationRentals: { en: "Vacation Rentals", es: "Alquileres Vacaciones" },
+                }
+            },
+            forSale: {
+                en: "For Sale", es: "En Venta", subCategories: {
+                    autoParts: { en: "Auto Parts", es: "Repuestos" },
+                    carsTrucks: { en: "Cars & Trucks", es: "Carros y Camiones" },
+                    electronics: { en: "Electronics", es: "Electrónicos" },
+                    furniture: { en: "Furniture", es: "Muebles" },
+                    household: { en: "Household", es: "Artículos del Hogar" },
+                    motorcycles: { en: "Motorcycles", es: "Motocicletas" },
+                    free: { en: "Free", es: "Gratis" },
+                }
+            },
+            jobs: {
+                en: "Jobs", es: "Empleo", subCategories: {
+                    adminOffice: { en: "Admin / Office", es: "Admin / Oficina" },
+                    customerService: { en: "Customer Service", es: "Servicio al Cliente" },
+                    hospitalityHotel: { en: "Hospitality / Hotel", es: "Hotelería / Hospitalidad" },
+                    salesMarketing: { en: "Sales / Marketing", es: "Ventas / Mercadeo" },
+                    softwareIT: { en: "Software / IT", es: "Software / TI" },
+                    tourism: { en: "Tourism", es: "Turismo" },
+                    generalLabor: { en: "General Labor", es: "Trabajo General" },
+                }
+            },
+            services: {
+                en: "Services", es: "Servicios", subCategories: {
+                    automotive: { en: "Automotive", es: "Automotriz" },
+                    computer: { en: "Computer", es: "Computación" },
+                    financial: { en: "Financial", es: "Financiero" },
+                    legal: { en: "Legal", es: "Legal" },
+                    lessons: { en: "Lessons & Tutoring", es: "Lecciones & Tutorías" },
+                    realEstate: { en: "Real Estate", es: "Bienes Raíces" },
+                    skilledTrade: { en: "Skilled Trade", es: "Oficios" },
+                }
+            },
+            community: {
+                en: "Community", es: "Comunidad", subCategories: {
+                    activities: { en: "Activities", es: "Actividades" },
+                    classes: { en: "Classes", es: "Clases" },
+                    events: { en: "Events", es: "Eventos" },
+                    localNews: { en: "Local News", es: "Noticias Locales" },
+                    lostFound: { en: "Lost & Found", es: "Perdidos y Encontrados" },
+                    volunteers: { en: "Volunteers", es: "Voluntarios" },
+                }
+            },
+            personals: {
+                en: "Personals", es: "Personales", subCategories: {
+                    strictlyPlatonic: { en: "Strictly Platonic", es: "Estrictamente Platónico" },
+                    womenSeekingMen: { en: "Women Seek Men", es: "Mujeres Buscan Hombres" },
+                    menSeekingWomen: { en: "Men Seek Women", es: "Hombres Buscan Mujeres" },
+                    menSeekingMen: { en: "Men Seek Men", es: "Hombres Buscan Hombres" },
+                    womenSeekingWomen: { en: "Women Seek Women", es: "Mujeres Buscan Mujeres" },
+                }
+            }
+        };
+
+
+        // 2. Override setLang
+        const originalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            currentLang = lang;
+            if (originalSetLang) {
+                originalSetLang(lang, {});
+            }
+            listingTitleEn.style.display = lang === 'en' ? 'block' : 'none';
+            listingTitleEs.style.display = lang === 'es' ? 'block' : 'none';
+            listingDescriptionEn.style.display = lang === 'en' ? 'block' : 'none';
+            listingDescriptionEs.style.display = lang === 'es' ? 'block' : 'none';
+
+            dynamicDetails.querySelectorAll('.lang-en, .lang-es').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+
+            const timestamp = listingDate.dataset.timestamp;
+            if (timestamp) {
+                listingDate.textContent = new Date(timestamp * 1000).toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US');
+            }
+
+            // --- NEW: Update breadcrumb language ---
+            const catKey = breadcrumbCategory.dataset.key;
+            const subCatKey = breadcrumbSubCategory.dataset.key;
+            if (catKey && subCatKey && categoryData[catKey] && categoryData[catKey].subCategories[subCatKey]) {
+                breadcrumbCategory.querySelector('.lang-en').textContent = categoryData[catKey].en;
+                breadcrumbCategory.querySelector('.lang-es').textContent = categoryData[catKey].es;
+                breadcrumbSubCategory.querySelector('.lang-en').textContent = categoryData[catKey].subCategories[subCatKey].en;
+                breadcrumbSubCategory.querySelector('.lang-es').textContent = categoryData[catKey].subCategories[subCatKey].es;
+            }
+
+            // --- NEW: Update no-contact/sold message ---
+            noContactInfo.querySelectorAll('.lang-en, .lang-es').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+            soldMessage.querySelectorAll('.lang-en, .lang-es').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+            soldBanner.querySelectorAll('.lang-en, .lang-es').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+
+            // --- NEW: Update Report Modal ---
+            reportAdModal.querySelectorAll('.lang-en, .lang-es').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+            // Need to check if labels exist before setting textContent
+            const reasonSpam = document.querySelector('label[for="reason-spam"]');
+            if (reasonSpam) reasonSpam.textContent = lang === 'es' ? ' Spam / Repetido' : ' Spam / Repost';
+
+            const reasonFraud = document.querySelector('label[for="reason-fraud"]');
+            if (reasonFraud) reasonFraud.textContent = lang === 'es' ? ' Fraude / Estafa' : ' Fraud / Scam';
+
+            const reasonIllegal = document.querySelector('label[for="reason-illegal"]');
+            if (reasonIllegal) reasonIllegal.textContent = lang === 'es' ? ' Ilegal / Prohibido' : ' Illegal / Prohibited Item';
+
+            const reasonWrongCategory = document.querySelector('label[for="reason-wrong-category"]');
+            if (reasonWrongCategory) reasonWrongCategory.textContent = lang === 'es' ? ' Categoría Incorrecta' : ' Wrong Category';
+
+            const reasonOther = document.querySelector('label[for="reason-other"]');
+            if (reasonOther) reasonOther.textContent = lang === 'es' ? ' Otro' : ' Other';
+
+            // --- NEW: Update Report Success Message ---
+            flagPostSuccess.querySelectorAll('.lang-en, .lang-es').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+
+
+            // Update currency display based on language default (no change, but good to keep)
+            setCurrency(lang === 'es' ? 'crc' : 'usd');
+        };
+
+        // 3. Helper Functions
+        function getListingIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id');
+        }
+
+        async function fetchListingDetails(id) {
+            if (!db) { throw new Error("Database connection not ready."); }
+            console.log(`Fetching listing details for ID: ${id}`);
+            const docRef = db.collection("listings").doc(id);
+            const docSnap = await docRef.get();
+            if (docSnap.exists) {
+                console.log("Document data:", docSnap.data());
+                return docSnap.data();
+            } else {
+                console.error("No such document!");
+                throw new Error("Listing not found");
+            }
+        }
+
+        // --- Currency Functions ---
+        function parsePrice(priceString) {
+            if (!priceString) return 0;
+            const cleaned = priceString.replace(/[^0-9.]/g, ''); // Remove all non-numeric chars except .
+            const value = parseFloat(cleaned);
+            if (isNaN(value)) return 0;
+
+            if (priceString.includes('₡')) {
+                return value / USD_TO_CRC_RATE; // Convert CRC to USD
+            }
+            // Assume USD if it contains '$' or no symbol
+            return value;
+        }
+
+        function updatePriceDisplay() {
+            let formattedPrice = '';
+            if (currentCurrency === 'usd') {
+                formattedPrice = `$${basePriceUSD.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; // Format as $1,000
+                currencyUsdBtn.classList.remove('opacity-50');
+                currencyCrcBtn.classList.add('opacity-50');
+            } else { // crc
+                const crcValue = basePriceUSD * USD_TO_CRC_RATE;
+                formattedPrice = `₡${crcValue.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; // Format as ₡500 000
+                currencyCrcBtn.classList.remove('opacity-50');
+                currencyUsdBtn.classList.add('opacity-50');
+            }
+            listingPrice.textContent = formattedPrice;
+        }
+
+        function setCurrency(currency) {
+            currentCurrency = currency;
+            updatePriceDisplay();
+        }
+        window.setCurrency = setCurrency; // Make available to HTML onclick
+        // --- End Currency Functions ---
+
+        // --- NEW: Gallery Functions ---
+        function updateGalleryView() {
+            // Update main image
+            mainImage.src = adImageUrls[currentImageIndex];
+
+            // Update thumbnail borders
+            thumbnailStrip.querySelectorAll('img').forEach((thumb, index) => {
+                if (index === currentImageIndex) {
+                    thumb.classList.add('active-thumb', 'border-blue-600');
+                    thumb.classList.remove('border-transparent');
+                } else {
+                    thumb.classList.remove('active-thumb', 'border-blue-600');
+                    thumb.classList.add('border-transparent');
+                }
+            });
+        }
+
+        function showNextImage() {
+            currentImageIndex = (currentImageIndex + 1) % adImageUrls.length;
+            updateGalleryView();
+        }
+
+        function showPrevImage() {
+            currentImageIndex = (currentImageIndex - 1 + adImageUrls.length) % adImageUrls.length;
+            updateGalleryView();
+        }
+        // --- End Gallery Functions ---
+
+
+        function renderListing(ad) {
+            listingTitleEn.textContent = ad.title_en || ad.title_es;
+            listingTitleEs.textContent = ad.title_es || ad.title_en;
+
+            // --- NEW: Store listing owner ID ---
+            currentListingOwnerId = ad.userId || null;
+
+            // --- Price Parsing ---
+            basePriceUSD = parsePrice(ad.price); // Parse and store base USD price
+            updatePriceDisplay(); // Display initial price
+
+            if (ad.createdAt && ad.createdAt.seconds) {
+                listingDate.dataset.timestamp = ad.createdAt.seconds;
+                listingDate.textContent = new Date(ad.createdAt.seconds * 1000).toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US');
+            } else {
+                listingDate.textContent = "N/A";
+            }
+
+            listingZone.textContent = ad.zone ? ad.zone.charAt(0).toUpperCase() + ad.zone.slice(1) : 'N/A';
+
+            // --- Breadcrumbs (NEW) ---
+            if (ad.category && ad.subCategory && categoryData[ad.category] && categoryData[ad.category].subCategories[ad.subCategory]) {
+                const cat = categoryData[ad.category];
+                const subCat = cat.subCategories[ad.subCategory];
+                breadcrumbCategory.dataset.key = ad.category;
+                breadcrumbSubCategory.dataset.key = ad.subCategory;
+                breadcrumbCategory.querySelector('.lang-en').textContent = cat.en;
+                breadcrumbCategory.querySelector('.lang-es').textContent = cat.es;
+                breadcrumbSubCategory.querySelector('.lang-en').textContent = subCat.en;
+                breadcrumbSubCategory.querySelector('.lang-es').textContent = subCat.es;
+                // Set hrefs
+                breadcrumbCategory.href = `../../#${ad.category}`; // Link to section on homepage
+                breadcrumbSubCategory.href = `../../pages/${ad.category}/${ad.subCategory}.html`; // Link to category page
+            } else {
+                breadcrumbCategory.textContent = ad.category || '...';
+                breadcrumbSubCategory.textContent = ad.subCategory || '...';
+            }
+
+
+            dynamicDetails.innerHTML = '';
+            if (ad.rooms) {
+                const roomsEl = document.createElement('div');
+                roomsEl.className = 'mr-6 mb-2';
+                roomsEl.innerHTML = `
+                    <strong><span class="lang-en">Rooms:</span><span class="lang-es">Habitaciones:</span></strong>
+                    <span class="ml-2">${ad.rooms}</span>
+                `;
+                dynamicDetails.appendChild(roomsEl);
+            }
+            if (ad.baths) {
+                const bathsEl = document.createElement('div');
+                bathsEl.className = 'mr-6 mb-2';
+                bathsEl.innerHTML = `
+                    <strong><span class="lang-en">Baths:</span><span class="lang-es">Baños:</span></strong>
+                    <span class="ml-2">${ad.baths}</span>
+                `;
+                dynamicDetails.appendChild(bathsEl);
+            }
+
+            listingDescriptionEn.textContent = ad.description_en || ad.description_es || 'No description provided.';
+            listingDescriptionEs.textContent = ad.description_es || ad.description_en || 'No hay descripción.';
+
+
+            // 
+            // ============================================================
+            // === UPDATED: SOLD & Contact Preference Logic             ===
+            // ============================================================
+            //
+            if (ad.status === 'sold') {
+                soldBanner.style.display = 'block';
+                soldMessage.style.display = 'block';
+                contactSection.style.display = 'none';
+                flagPostBtn.style.display = 'none'; // Hide report button if sold
+            } else {
+                // --- This is the original Contact Preference Logic ---
+                soldBanner.style.display = 'none';
+                soldMessage.style.display = 'none';
+                contactSection.style.display = 'block';
+                flagPostBtn.style.display = 'block'; // Show report button if active
+                // --- NEW: Populate Display Name ---
+                if (ad.displayName) {
+                    contactSellerName.textContent = ad.displayName;
+                    contactSellerNameContainer.style.display = 'flex';
+                } else {
+                    contactSellerNameContainer.style.display = 'none';
+                }
+
+                const prefs = ad.contactPreferences || []; // e.g., ['phone', 'whatsapp']
+                let contactMethodShown = false;
+
+                // Show Phone?
+                if (prefs.includes('phone') && ad.contactPhone) {
+                    contactPhoneLink.textContent = ad.contactPhone;
+                    contactPhoneLink.href = `tel:${ad.contactPhone}`;
+                    contactPhone.style.display = 'flex'; // Use flex to align icon
+                    contactMethodShown = true;
+                } else {
+                    contactPhone.style.display = 'none';
+                }
+
+                // Show WhatsApp?
+                if (prefs.includes('whatsapp') && ad.contactPhone) {
+                    // Format phone number for WhatsApp URL (remove spaces, dashes)
+                    const whatsappNumber = ad.contactPhone.replace(/[\s-]/g, '');
+                    contactWhatsAppLink.textContent = ad.contactPhone;
+                    contactWhatsAppLink.href = `https://wa.me/${whatsappNumber}`; // Assumes CR code if not included
+                    contactWhatsApp.style.display = 'flex'; // Use flex to align icon
+                    contactMethodShown = true;
+                } else {
+                    contactWhatsApp.style.display = 'none';
+                }
+
+                // Show Email?
+                if (prefs.includes('email') && ad.contactEmail) {
+                    contactEmailLink.textContent = ad.contactEmail;
+                    contactEmailLink.href = `mailto:${ad.contactEmail}`;
+                    contactEmail.style.display = 'flex'; // Use flex to align icon
+                    contactMethodShown = true;
+                } else {
+                    contactEmail.style.display = 'none';
+                }
+
+                // Show 'no contact' message if no methods were valid/preferred
+                if (!contactMethodShown) {
+                    noContactInfo.style.display = 'block';
+                } else {
+                    noContactInfo.style.display = 'none';
+                }
+            }
+            // --- End Sold / Contact Preference Logic ---
+
+
+            const placeholderUrl = `https://placehold.co/600x400/EEE/333?text=${currentLang === 'es' ? 'Sin foto' : 'No photo'}`;
+            adImageUrls = (ad.imageUrls && ad.imageUrls.length > 0) ? ad.imageUrls : [placeholderUrl];
+
+            if (adImageUrls.length > 0) {
+                mainImage.src = adImageUrls[0];
+                mainImage.onerror = () => { mainImage.src = placeholderUrl; };
+
+                // Only show gallery controls if there are multiple images
+                if (adImageUrls.length > 1) {
+                    thumbnailStrip.innerHTML = '';
+                    adImageUrls.forEach((url, index) => {
+                        const thumb = document.createElement('img');
+                        thumb.src = url;
+                        thumb.className = "w-16 h-16 object-cover rounded cursor-pointer border-2 hover:border-blue-500";
+                        // Add active class to first thumb
+                        thumb.classList.add(index === 0 ? 'active-thumb border-blue-600' : 'border-transparent');
+
+                        thumb.onclick = () => {
+                            currentImageIndex = index;
+                            updateGalleryView();
+                        };
+                        thumbnailStrip.appendChild(thumb);
+                    });
+
+                    thumbnailStrip.style.display = 'flex';
+                    prevImageBtn.style.display = 'flex';
+                    nextImageBtn.style.display = 'flex';
+                } else {
+                    // Hide controls if only 1 image
+                    thumbnailStrip.style.display = 'none';
+                    prevImageBtn.style.display = 'none';
+                    nextImageBtn.style.display = 'none';
+                }
+            }
+
+            loadingMsg.style.display = 'none';
+            listingContent.style.display = 'block';
+        }
+
+        function handleError(error) {
+            console.error("Error loading listing:", error);
+            listingContent.innerHTML = '';
+            loadingMsg.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error: Listing not found or could not be loaded.</span><span class="lang-es">Error: No se encontró el anuncio o no se pudo cargar.</span></div>`;
+            loadingMsg.style.display = 'block';
+        }
+
+        // --- NEW: Handle Report Submission ---
+        async function handleSubmitReport() {
+            if (!db) {
+                reportErrorMsg.textContent = currentLang === 'es' ? 'Error: No hay conexión.' : 'Error: Not connected.';
+                reportErrorMsg.style.display = 'block';
+                return;
+            }
+
+            const reasonEl = document.querySelector('input[name="report-reason"]:checked');
+            if (!reasonEl) {
+                reportErrorMsg.textContent = currentLang === 'es' ? 'Por favor seleccione una razón.' : 'Please select a reason.';
+                reportErrorMsg.style.display = 'block';
+                return;
+            }
+            const reason = reasonEl.value;
+
+            submitReportBtn.disabled = true;
+            reportErrorMsg.style.display = 'none';
+
+            try {
+                const reporterId = auth.currentUser ? auth.currentUser.uid : 'anonymous';
+
+                // Create a new document in the 'reports' collection
+                await db.collection("reports").add({
+                    listingId: currentListingId,
+                    listingOwnerId: currentListingOwnerId,
+                    reporterId: reporterId,
+                    reason: reason,
+                    reportedAt: firebase.firestore.Timestamp.now(),
+                    status: 'new' // 'new', 'in_review', 'resolved'
+                });
+
+                // Success
+                reportAdModal.style.display = 'none';
+                flagPostBtn.style.display = 'none';
+                flagPostSuccess.style.display = 'block';
+
+                // Reset modal form for next time
+                reasonEl.checked = false;
+                submitReportBtn.disabled = false;
+                if (window.setLang) window.setLang(currentLang); // Update success message language
+
+            } catch (error) {
+                console.error("Error submitting report:", error);
+                reportErrorMsg.textContent = currentLang === 'es' ? 'Error al enviar reporte. Intente de nuevo.' : 'Error submitting report. Please try again.';
+                reportErrorMsg.style.display = 'block';
+                submitReportBtn.disabled = false;
+            }
+        }
+
+
+        // 4. Run the initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log("DOM Content Loaded for detail.html");
+            try {
+                let headerLoaded = false;
+                if (window.loadComponents) {
+                    headerLoaded = await window.loadComponents('../../');
+                    console.log("Components loaded:", headerLoaded);
+                } else { throw new Error("loadComponents not found"); }
+
+                let attempts = 0;
+                while ((!window.firebaseAuthInstance || !window.firestoreDbInstance) && !window.firebaseInitializationError && attempts < 20) {
+                    console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                if (window.firebaseAuthInstance && window.firestoreDbInstance) {
+                    db = window.firestoreDbInstance;
+                    auth = window.firebaseAuthInstance;
+                    console.log("Firebase instances assigned for detail page.");
+
+                    if (headerLoaded && window.runSessionLogic) window.runSessionLogic('../../');
+
+                    // Set initial language *before* fetching data
+                    if (window.setLang) window.setLang(currentLang);
+
+                    // --- NEW: Add gallery button listeners ---
+                    prevImageBtn.addEventListener('click', showPrevImage);
+                    nextImageBtn.addEventListener('click', showNextImage);
+
+                    // --- NEW: Add Report Modal Listeners ---
+                    flagPostBtn.addEventListener('click', () => {
+                        reportAdModal.style.display = 'flex';
+                        reportErrorMsg.style.display = 'none'; // Clear old errors
+                        if (window.setLang) window.setLang(currentLang); // Ensure modal text is correct
+                    });
+                    cancelReportBtn.addEventListener('click', () => {
+                        reportAdModal.style.display = 'none';
+                    });
+                    submitReportBtn.addEventListener('click', handleSubmitReport);
+
+
+                    const listingId = getListingIdFromUrl();
+                    if (listingId) {
+                        currentListingId = listingId; // Store for report function
+                        const listingData = await fetchListingDetails(listingId);
+                        renderListing(listingData);
+                        // Re-run setLang to apply to dynamic content
+                        if (window.setLang) window.setLang(currentLang);
+                    } else {
+                        throw new Error("No listing ID found in URL.");
+                    }
+
+                } else {
+                    if (window.firebaseInitializationError) { throw new Error(`Firebase init failed earlier: ${window.firebaseInitializationError}`); }
+                    else { throw new Error("Firebase instances not available after delay."); }
+                }
+            } catch (error) {
+                handleError(error);
+                if (window.setLang) window.setLang(currentLang);
+            }
+        });
+    </script>
+
+</body>
+
+</html>

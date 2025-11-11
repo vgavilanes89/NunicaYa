@@ -1,0 +1,772 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - My Profile</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet (root) -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- Add Storage SDK (Needed if you plan ad editing/deleting images) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    
+    <!-- Custom Modal Styles -->
+    <style>
+        /* Ensure modal spans are handled correctly for language */
+        #confirmation-modal .lang-en,
+        #confirmation-modal .lang-es {
+            display: none; /* Hide both by default */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-6xl py-8">
+
+        <!-- Page Title -->
+        <h2 class="text-3xl font-bold mb-6">
+            <span class="lang-en">My Profile</span>
+            <span class="lang-es">Mi Perfil</span>
+        </h2>
+
+        <!-- Profile Sections Wrapper -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            <!-- Account Details (Read-only) -->
+            <div class="md:col-span-1">
+                <div class="bg-white p-6 rounded-md shadow-sm border border-gray-200">
+                    <h3 class="text-xl font-semibold mb-4">
+                        <span class="lang-en">Account Details</span>
+                        <span class="lang-es">Detalles de la Cuenta</span>
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="profile-name" class="block text-sm font-medium text-gray-700">
+                                <span class="lang-en">Full Name</span>
+                                <span class="lang-es">Nombre Completo</span>
+                            </label>
+                            <input type="text" id="profile-name" readonly
+                                class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label for="profile-email" class="block text-sm font-medium text-gray-700">
+                                <span class="lang-en">Email</span>
+                                <span class="lang-es">Correo Electrónico</span>
+                            </label>
+                            <input type="email" id="profile-email" readonly
+                                class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label for="profile-phone" class="block text-sm font-medium text-gray-700">
+                                <span class="lang-en">Phone</span>
+                                <span class="lang-es">Teléfono</span>
+                            </label>
+                            <input type="tel" id="profile-phone" readonly
+                                class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-4">
+                        <span class="lang-en">To update your details, please contact support.</span>
+                        <span class="lang-es">Para actualizar sus datos, por favor contacte a soporte.</span>
+                    </p>
+                    <button id="logout-button"
+                        class="mt-6 w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700">
+                        <span class="lang-en">Logout</span>
+                        <span class="lang-es">Cerrar Sesión</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content Area (My Ads & My Favorites) -->
+            <div class="md:col-span-2 space-y-8">
+                <!-- My Ads -->
+                <div class="bg-white rounded-md shadow-sm border border-gray-200">
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-xl font-semibold">
+                            <span class="lang-en">My Ads</span>
+                            <span class="lang-es">Mis Anuncios</span>
+                        </h3>
+                        <a href="post-ad.html"
+                            class="bg-blue-600 text-white p-2 px-4 rounded-md hover:bg-blue-700 text-sm">
+                            <span class="lang-en">Post New Ad</span>
+                            <span class="lang-es">Publicar Nuevo</span>
+                        </a>
+                    </div>
+
+                    <div id="my-ads-container" class="divide-y divide-gray-200">
+                        <div id="ads-loading-msg" class="p-8 text-center text-gray-500">
+                            <span class="lang-en">Loading your ads...</span>
+                            <span class="lang-es">Cargando sus anuncios...</span>
+                        </div>
+                        <!-- Ads will be dynamically loaded here -->
+                    </div>
+                </div>
+
+                <!-- My Favorites -->
+                <div class="bg-white rounded-md shadow-sm border border-gray-200">
+                    <div class="p-4 border-b border-gray-200">
+                        <h3 class="text-xl font-semibold">
+                            <span class="lang-en">My Favorites</span>
+                            <span class="lang-es">Mis Favoritos</span>
+                        </h3>
+                    </div>
+
+                    <div id="my-favorites-container" class="divide-y divide-gray-200">
+                        <div id="favorites-loading-msg" class="p-8 text-center text-gray-500">
+                            <span class="lang-en">Loading your favorites...</span>
+                            <span class="lang-es">Cargando sus favoritos...</span>
+                        </div>
+                        <!-- Favorite listings will be loaded here -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div> <!-- End Grid -->
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- NEW: Custom Confirmation Modal -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-900" id="modal-title">
+                    <span class="lang-en">Confirm Action</span>
+                    <span class="lang-es">Confirmar Acción</span>
+                </h3>
+                <p class="mt-2 text-sm text-gray-600" id="modal-message">Message will be set by JavaScript.</p>
+            </div>
+            <div class="bg-gray-50 px-6 py-3 flex flex-col sm:flex-row-reverse sm:gap-4">
+                <button type="button" id="modal-confirm-btn" class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    <span class="lang-en">Confirm</span>
+                    <span class="lang-es">Confirmar</span>
+                </button>
+                <button type="button" id="modal-cancel-btn" class="w-full sm:w-auto mt-3 sm:mt-0 inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <span class="lang-en">Cancel</span>
+                    <span class="lang-es">Cancelar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Application Script -->
+    <script src="app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // --- 1. Page Elements & State ---
+        const profileName = document.getElementById('profile-name');
+        const profileEmail = document.getElementById('profile-email');
+        const profilePhone = document.getElementById('profile-phone');
+        const adsContainer = document.getElementById('my-ads-container');
+        const adsLoadingMsg = document.getElementById('ads-loading-msg');
+        const favoritesContainer = document.getElementById('my-favorites-container');
+        const favoritesLoadingMsg = document.getElementById('favorites-loading-msg');
+        const logoutButton = document.getElementById('logout-button');
+
+        // Modal Elements
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalTitle = document.getElementById('modal-title');
+        // MODIFICATION: Changed const to let
+        let modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        let modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+        const pageSpecificText = {
+            'profile-name': { en: 'Loading...', es: 'Cargando...' },
+            'profile-email': { en: 'Loading...', es: 'Cargando...' },
+            'profile-phone': { en: 'Loading...', es: 'Cargando...' }
+        };
+        let currentLang = 'es';
+
+        // Firebase instances
+        let db = null;
+        let auth = null;
+        let storage = null;
+
+        // --- 2. Language Setup ---
+        const originalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            currentLang = lang;
+            if (originalSetLang) {
+                originalSetLang(lang, pageSpecificText); // Update global/header elements
+            }
+            // Re-toggle dynamic ad text
+            document.querySelectorAll('.ad-status, .fav-status').forEach(el => {
+                el.textContent = el.dataset[lang] || el.textContent;
+            });
+            // Re-render dates
+            document.querySelectorAll('.listing-date').forEach(el => {
+                const timestampSeconds = parseInt(el.dataset.timestamp, 10);
+                if (!isNaN(timestampSeconds)) {
+                    el.textContent = new Date(timestampSeconds * 1000).toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US');
+                }
+            });
+            // Update loading/error messages
+            document.querySelectorAll('#ads-loading-msg span, #favorites-loading-msg span').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+            
+            // Update modal text
+            modalTitle.querySelectorAll('span').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+            modalConfirmBtn.querySelectorAll('span').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+            modalCancelBtn.querySelectorAll('span').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
+            });
+        };
+        
+        // --- 3. Display Helpers ---
+        function displayMessage(code, type = 'error') {
+            console.error(`Profile Page Error (${type}): ${code}`);
+            // This page doesn't have a central message area, logs to console
+        }
+        
+        /**
+         * Shows a confirmation modal.
+         * @param {string} messageEn - The English message.
+         * @param {string} messageEs - The Spanish message.
+         * @returns {Promise<boolean>} - Resolves with true if confirmed, false if cancelled.
+         */
+        function showConfirmationModal(messageEn, messageEs) {
+            const message = (currentLang === 'es') ? messageEs : messageEn;
+            modalMessage.textContent = message;
+
+            // Set correct language for buttons/title
+            window.setLang(currentLang); 
+
+            confirmationModal.classList.remove('hidden');
+            confirmationModal.classList.add('flex');
+
+            return new Promise((resolve) => {
+                const confirmHandler = () => {
+                    confirmationModal.classList.add('hidden');
+                    confirmationModal.classList.remove('flex');
+                    cleanup();
+                    resolve(true); // User confirmed
+                };
+                
+                // MODIFICATION: Add the missing cancelHandler
+                const cancelHandler = () => {
+                    confirmationModal.classList.add('hidden');
+                    confirmationModal.classList.remove('flex');
+                    cleanup();
+                    resolve(false); // User cancelled
+                };
+
+                // Use .cloneNode(true) to remove old event listeners
+                const newConfirmBtn = modalConfirmBtn.cloneNode(true);
+                modalConfirmBtn.parentNode.replaceChild(newConfirmBtn, modalConfirmBtn);
+                modalConfirmBtn = newConfirmBtn; // MODIFICATION: Update the variable to the new button
+                modalConfirmBtn.addEventListener('click', confirmHandler);
+
+                const newCancelBtn = modalCancelBtn.cloneNode(true);
+                modalCancelBtn.parentNode.replaceChild(newCancelBtn, modalCancelBtn);
+                modalCancelBtn = newCancelBtn; // MODIFICATION: Update the variable to the new button
+                modalCancelBtn.addEventListener('click', cancelHandler); // This will now work
+                
+                function cleanup() {
+                    // This is good practice but cloneNode helps
+                }
+            });
+        }
+
+
+        // --- 4. Core Profile Logic ---
+
+        async function loadUserProfile(currentUser) {
+            if (!currentUser || !db) return;
+            profileEmail.value = currentUser.email || 'N/A';
+            const userDocRef = db.collection("users").doc(currentUser.uid);
+            try {
+                const docSnap = await userDocRef.get();
+                if (docSnap.exists) {
+                    const userData = docSnap.data();
+                    profileName.value = userData.fullName || 'N/A';
+                    profilePhone.value = userData.phone || 'N/A';
+                    console.log("User profile data loaded:", userData);
+                } else {
+                    console.warn("No user profile document found in Firestore for UID:", currentUser.uid);
+                    profileName.value = 'N/A';
+                    profilePhone.value = 'N/A';
+                }
+            } catch (error) {
+                console.error("Error fetching user profile:", error);
+                profileName.value = 'Error';
+                profilePhone.value = 'Error';
+                displayMessage('firestore-error');
+            }
+        }
+
+        async function loadUserAds(currentUser) {
+            if (!currentUser || !db) return;
+            adsLoadingMsg.style.display = 'block';
+            adsContainer.innerHTML = '';
+            adsContainer.appendChild(adsLoadingMsg);
+
+            const adsQuery = db.collection("listings")
+                .where("userId", "==", currentUser.uid)
+                .orderBy("createdAt", "desc");
+            try {
+                const querySnapshot = await adsQuery.get();
+                adsLoadingMsg.style.display = 'none';
+                if (querySnapshot.empty) {
+                    adsContainer.innerHTML = `<div class="p-8 text-center text-gray-500"><span class="lang-en">You have not posted any ads.</span><span class="lang-es">No has publicado ningún anuncio.</span></div>`;
+                    return;
+                }
+                adsContainer.innerHTML = '';
+                querySnapshot.forEach(doc => {
+                    adsContainer.appendChild(createAdHTML(doc.data(), doc.id));
+                });
+                if (window.setLang) window.setLang(currentLang);
+            } catch (error) {
+                console.error("Error fetching user ads:", error);
+                adsLoadingMsg.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error loading ads.</span><span class="lang-es">Error al cargar anuncios.</span></div>`;
+                displayMessage('firestore-error');
+            }
+        }
+
+        async function loadUserFavorites(currentUser) {
+            if (!currentUser || !db) return;
+            favoritesLoadingMsg.style.display = 'block';
+            favoritesContainer.innerHTML = '';
+            favoritesContainer.appendChild(favoritesLoadingMsg);
+
+            try {
+                // 1. Get the list of favorite IDs
+                const favoritesSnapshot = await db.collection("users").doc(currentUser.uid).collection("favorites")
+                    .orderBy("addedAt", "desc")
+                    .get();
+
+                if (favoritesSnapshot.empty) {
+                    favoritesLoadingMsg.style.display = 'none';
+                    favoritesContainer.innerHTML = `<div class="p-8 text-center text-gray-500"><span class="lang-en">You have no saved favorites.</span><span class="lang-es">No tienes anuncios guardados.</span></div>`;
+                    return;
+                }
+
+                // 2. Extract the listing IDs
+                const listingIds = favoritesSnapshot.docs.map(doc => doc.id);
+
+                // 3. Fetch the actual listing documents
+                const fetchPromises = listingIds.map(id => db.collection("listings").doc(id).get());
+                const listingDocs = await Promise.all(fetchPromises);
+
+                favoritesLoadingMsg.style.display = 'none';
+                favoritesContainer.innerHTML = '';
+
+                let favoritesFound = 0;
+                listingDocs.forEach(docSnap => {
+                    if (docSnap.exists) {
+                        favoritesFound++;
+                        favoritesContainer.appendChild(createFavoriteHTML(docSnap.data(), docSnap.id));
+                    } else {
+                        console.warn(`Favorited listing ${docSnap.id} no longer exists.`);
+                        // Clean up orphan favorite
+                        db.collection("users").doc(currentUser.uid).collection("favorites").doc(docSnap.id).delete();
+                    }
+                });
+
+                if (favoritesFound === 0) {
+                    favoritesContainer.innerHTML = `<div class="p-8 text-center text-gray-500"><span class="lang-en">You have no saved favorites.</span><span class="lang-es">No tienes anuncios guardados.</span></div>`;
+                }
+
+                if (window.setLang) window.setLang(currentLang);
+
+            } catch (error) {
+                console.error("Error fetching user favorites:", error);
+                favoritesLoadingMsg.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error loading favorites.</span><span class="lang-es">Error al cargar favoritos.</span></div>`;
+            }
+        }
+
+        /**
+         * NEW: Updated createAdHTML to handle 'sold' status and 'Mark as Sold' button
+         */
+        function createAdHTML(ad, adId) {
+            const adEl = document.createElement('div');
+            // Add ad-item class and data-id for easier selection later
+            adEl.className = 'ad-item p-4 flex flex-col sm:flex-row justify-between items-start';
+            adEl.dataset.id = adId;
+
+            const placeholderUrl = `https://placehold.co/100x100/EEE/333?text=${currentLang === 'es' ? 'Sin foto' : 'No photo'}`;
+            const imageUrl = (ad.imageUrls && ad.imageUrls.length > 0) ? ad.imageUrls[0] : placeholderUrl;
+
+            // --- Status Logic ---
+            let status = { en: 'Pending', es: 'Pendiente' };
+            let statusColor = 'text-yellow-600';
+            let isSold = ad.status === 'sold';
+
+            if (ad.status === 'active') {
+                status = { en: 'Active', es: 'Activo' };
+                statusColor = 'text-green-600';
+            } else if (ad.status === 'sold') {
+                status = { en: 'Sold', es: 'Vendido' };
+                statusColor = 'text-gray-500';
+            }
+            // --- End Status Logic ---
+
+            let postDate = currentLang === 'es' ? 'Fecha inv.' : 'Invalid date';
+            if (ad.createdAt && typeof ad.createdAt.toDate === 'function') {
+                postDate = ad.createdAt.toDate().toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US');
+            }
+
+            adEl.innerHTML = `
+                <div class="flex items-start">
+                    <a href="./pages/listing/detail.html?id=${adId}" class="flex-shrink-0">
+                        <img src="${imageUrl}" alt="Ad thumbnail" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-md" onerror="this.src='${placeholderUrl}'">
+                    </a>
+                    <div class="ml-4">
+                        <a href="./pages/listing/detail.html?id=${adId}" class="text-lg text-blue-700 hover:underline font-semibold">
+                            <span class="lang-en">${ad.title_en || ad.title_es || 'Untitled Ad'}</span>
+                            <span class="lang-es">${ad.title_es || ad.title_en || 'Anuncio sin Título'}</span>
+                        </a>
+                        <p class="text-sm text-gray-500">
+                            <span class="font-medium ${statusColor} ad-status" data-en="${status.en}" data-es="${status.es}">
+                                ${status[currentLang]}
+                            </span>
+                            -
+                            <span class="listing-date" data-timestamp="${ad.createdAt?.seconds || ''}">${postDate}</span>
+                        </p>
+                    </div>
+                </div>
+                <!-- Action Buttons -->
+                <div class="flex-shrink-0 mt-4 sm:mt-0 sm:ml-4 text-sm space-x-4 ad-actions">
+                    ${!isSold ? `
+                    <button class="text-green-600 hover:underline mark-sold-btn" data-id="${adId}">
+                        <span class="lang-en">Mark as Sold</span>
+                        <span class="lang-es">Marcar Vendido</span>
+                    </button>` : `
+                    <span class="text-gray-500 font-medium">
+                        <span class="lang-en">Sold</span>
+                        <span class="lang-es">Vendido</span>
+                    </span>
+                    `}
+                    <button class="text-blue-700 hover:underline edit-ad-btn" data-id="${adId}">
+                        <span class="lang-en">Edit</span>
+                        <span class="lang-es">Editar</span>
+                    </button>
+                    <button class="text-red-600 hover:underline delete-ad-btn" data-id="${adId}">
+                        <span class="lang-en">Delete</span>
+                        <span class="lang-es">Borrar</span>
+                    </button>
+                </div>
+            `;
+
+            adEl.querySelector('.edit-ad-btn').addEventListener('click', () => handleEditAd(adId));
+            adEl.querySelector('.delete-ad-btn').addEventListener('click', () => handleDeleteAd(adId, ad.imageUrls || []));
+            
+            // Add listener for the new "Mark as Sold" button
+            const markSoldBtn = adEl.querySelector('.mark-sold-btn');
+            if (markSoldBtn) {
+                markSoldBtn.addEventListener('click', () => handleMarkAsSold(adId));
+            }
+
+            return adEl;
+        }
+
+
+        function createFavoriteHTML(ad, adId) {
+            const adEl = document.createElement('div');
+            adEl.className = 'p-4 flex justify-between items-center';
+
+            const placeholderUrl = `https://placehold.co/100x100/EEE/333?text=${currentLang === 'es' ? 'Sin foto' : 'No photo'}`;
+            const imageUrl = (ad.imageUrls && ad.imageUrls.length > 0) ? ad.imageUrls[0] : placeholderUrl;
+
+            let postDate = currentLang === 'es' ? 'Fecha inv.' : 'Invalid date';
+            if (ad.createdAt && typeof ad.createdAt.toDate === 'function') {
+                postDate = ad.createdAt.toDate().toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US');
+            }
+            const price = ad.price || (currentLang === 'es' ? 'Consultar' : 'Ask');
+            const zoneDisplay = ad.zone ? ad.zone.charAt(0).toUpperCase() + ad.zone.slice(1) : '';
+
+
+            adEl.innerHTML = `
+                <div class="flex items-start">
+                    <a href="./pages/listing/detail.html?id=${adId}" class="flex-shrink-0">
+                         <img src="${imageUrl}" alt="Ad thumbnail" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-md" onerror="this.src='${placeholderUrl}'">
+                    </a>
+                    <div class="ml-4">
+                        <a href="./pages/listing/detail.html?id=${adId}" class="text-lg text-blue-700 hover:underline font-semibold">
+                            <span class="lang-en">${ad.title_en || ad.title_es || 'Untitled Ad'}</span>
+                            <span class="lang-es">${ad.title_es || ad.title_en || 'Anuncio sin Título'}</span>
+                        </a>
+                        <p class="text-sm text-gray-500">
+                            <span class="font-medium text-gray-800">${price}</span>
+                            ${zoneDisplay ? `<span class="ml-2">${zoneDisplay}</span>` : ''}
+                            -
+                            <span class="listing-date" data-timestamp="${ad.createdAt?.seconds || ''}">${postDate}</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 ml-4">
+                    <button class="text-red-600 hover:underline text-sm remove-favorite-btn" data-id="${adId}">
+                        <span class="lang-en">Remove</span>
+                        <span class="lang-es">Quitar</span>
+                    </button>
+                </div>
+            `;
+            adEl.querySelector('.remove-favorite-btn').addEventListener('click', () => handleRemoveFavorite(adId));
+            return adEl;
+        }
+
+        /**
+         * UPDATED: Handles the edit ad button click.
+         * Redirects to the post-ad page with the ad ID as a query parameter.
+         */
+        function handleEditAd(adId) {
+            console.log("Edit ad:", adId);
+            // Redirect to the post-ad page, passing the ID of the ad to edit
+            window.location.href = `post-ad.html?edit_id=${adId}`;
+        }
+
+        /**
+         * UPDATED: Uses custom modal for confirmation.
+         */
+        async function handleDeleteAd(adId, imageUrls) {
+            // Use custom modal instead of confirm()
+            const confirmDelete = await showConfirmationModal(
+                `Are you sure you want to delete this ad (${adId})? This cannot be undone.`,
+                `¿Está seguro que desea borrar este anuncio (${adId})? Esta acción no se puede deshacer.`
+            );
+            
+            if (!confirmDelete) return;
+            if (!db || !storage) { displayMessage('firebase-not-ready'); return; }
+
+            try {
+                await db.collection("listings").doc(adId).delete();
+                console.log("Firestore document deleted:", adId);
+                if (imageUrls && imageUrls.length > 0) {
+                    const deletePromises = imageUrls.map(url => {
+                        try {
+                            // Try to delete using the full URL, which works for GCS URLs
+                            return storage.refFromURL(url).delete();
+                        } catch (refError) {
+                            // Fallback for non-GCS URLs or path-only URLs
+                            try {
+                                const urlParts = url.split('/o/');
+                                if (urlParts.length > 1) {
+                                    const encodedPath = urlParts[1].split('?')[0];
+                                    const decodedPath = decodeURIComponent(encodedPath);
+                                    return storage.ref(decodedPath).delete();
+                                }
+                                console.warn(`Could not parse storage path from URL: ${url}`);
+                            } catch (imgError) {
+                                console.error(`Failed to delete image ${url}:`, imgError);
+                            }
+                            return Promise.resolve(); // Don't block other deletions
+                        }
+                    });
+                    await Promise.all(deletePromises);
+                    console.log("Associated storage images deleted.");
+                }
+                const adElement = document.querySelector(`.ad-item[data-id="${adId}"]`);
+                if (adElement) adElement.remove();
+                
+                if (adsContainer.children.length === 0 || (adsContainer.children.length === 1 && adsContainer.firstChild.id === 'ads-loading-msg')) {
+                    adsContainer.innerHTML = `<div class="p-8 text-center text-gray-500"><span class="lang-en">You have no ads.</span><span class="lang-es">No tiene anuncios.</span></div>`;
+                    if (window.setLang) window.setLang(currentLang);
+                }
+            } catch (error) {
+                console.error("Error deleting ad:", error);
+                displayMessage('firestore-error');
+            }
+        }
+        
+        // --- NEW: Handle Mark as Sold ---
+        async function handleMarkAsSold(adId) {
+            const confirmSold = await showConfirmationModal(
+                'Are you sure you want to mark this ad as sold? This ad will be scheduled for deletion in 14 days.',
+                '¿Está seguro que desea marcar este anuncio como vendido? El anuncio será programado para borrarse en 14 días.'
+            );
+
+            if (!confirmSold) return;
+            if (!db || !firebase.firestore.Timestamp) {
+                displayMessage('firebase-not-ready');
+                console.error("Firestore or Timestamp is not available.");
+                return;
+            }
+
+            // Calculate deletion date: 14 days from now
+            const deleteDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+            const firestoreTimestamp = firebase.firestore.Timestamp.fromDate(deleteDate);
+
+            const adRef = db.collection("listings").doc(adId);
+
+            try {
+                await adRef.update({
+                    status: 'sold',
+                    deleteAt: firestoreTimestamp
+                });
+
+                console.log(`Ad ${adId} marked as sold. Scheduled for deletion on ${deleteDate.toISOString()}`);
+
+                // --- Update the UI without reloading ---
+                const adElement = document.querySelector(`.ad-item[data-id="${adId}"]`);
+                if (adElement) {
+                    // 1. Update status text
+                    const statusEl = adElement.querySelector('.ad-status');
+                    if (statusEl) {
+                        statusEl.dataset.en = "Sold";
+                        statusEl.dataset.es = "Vendido";
+                        statusEl.textContent = (currentLang === 'es') ? "Vendido" : "Sold";
+                        statusEl.className = 'font-medium text-gray-500 ad-status'; // Remove green/yellow color
+                    }
+                    
+                    // 2. Replace the "Mark as Sold" button with "Sold" text
+                    const markSoldBtn = adElement.querySelector('.mark-sold-btn');
+                    if (markSoldBtn) {
+                        const soldText = document.createElement('span');
+                        soldText.className = 'text-gray-500 font-medium';
+                        soldText.innerHTML = `<span class="lang-en">Sold</span><span class="lang-es">Vendido</span>`;
+                        
+                        // Handle language toggle for the new element
+                        soldText.querySelectorAll('span').forEach(el => {
+                            el.style.display = el.classList.contains(`lang-${currentLang}`) ? 'inline' : 'none';
+                        });
+
+                        markSoldBtn.parentNode.replaceChild(soldText, markSoldBtn);
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error marking ad as sold:", error);
+                displayMessage('firestore-error');
+                // We can't use alert, so just log
+                console.error('Error updating ad status.');
+            }
+        }
+
+
+        /**
+         * UPDATED: Uses custom modal for confirmation.
+         */
+        async function handleRemoveFavorite(listingId) {
+            // Use custom modal instead of confirm()
+            const confirmRemove = await showConfirmationModal(
+                'Remove this ad from your favorites?',
+                '¿Quitar este anuncio de sus favoritos?'
+            );
+
+            if (!confirmRemove || !auth.currentUser || !db) return;
+
+            const favRef = db.collection("users").doc(auth.currentUser.uid).collection("favorites").doc(listingId);
+            try {
+                await favRef.delete();
+                console.log("Favorite removed:", listingId);
+                const favElement = document.querySelector(`.remove-favorite-btn[data-id="${listingId}"]`)?.closest('.p-4');
+                if (favElement) favElement.remove();
+                
+                if (favoritesContainer.children.length === 0 || (favoritesContainer.children.length === 1 && favoritesContainer.firstChild.id === 'favorites-loading-msg')) {
+                    favoritesContainer.innerHTML = `<div class="p-8 text-center text-gray-500"><span class="lang-en">You have no saved favorites.</span><span class="lang-es">No tienes anuncios guardados.</span></div>`;
+                    if (window.setLang) window.setLang(currentLang);
+                }
+            } catch (error) {
+                console.error("Error removing favorite:", error);
+                // We can't use alert, so we'll just log it.
+                console.error('Error removing favorite.');
+            }
+        }
+
+        async function handleLogout() {
+            if (!auth) { console.error("Firebase Auth not ready."); return; }
+            try {
+                await auth.signOut();
+                localStorage.removeItem('nunciaya-user-session');
+                console.log('User signed out');
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error("Error signing out:", error);
+            }
+        }
+
+
+        // --- 5. Initialize Page on DOMContentLoaded ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log("DOM Content Loaded for profile.html");
+            try {
+                let headerLoaded = false;
+                if (window.loadComponents) {
+                    headerLoaded = await window.loadComponents('./');
+                    console.log("Components loaded:", headerLoaded);
+                } else { throw new Error("loadComponents not found"); }
+
+                let attempts = 0;
+                const maxAttempts = 20;
+                while ((!window.firebaseAuthInstance || !window.firestoreDbInstance) && !window.firebaseInitializationError && attempts < maxAttempts) {
+                    console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                if (window.firebaseAuthInstance && window.firestoreDbInstance) {
+                    db = window.firestoreDbInstance;
+                    auth = window.firebaseAuthInstance;
+                    storage = window.firebaseStorageInstance;
+                    console.log("Firebase instances assigned for profile.");
+
+                    if (auth) {
+                        auth.onAuthStateChanged(async (user) => {
+                            if (user) {
+                                console.log("User is logged in:", user.uid);
+                                if (headerLoaded && window.runSessionLogic) window.runSessionLogic('./');
+
+                                await loadUserProfile(user);
+                                await loadUserAds(user);
+                                await loadUserFavorites(user); // --- NEW ---
+
+                                if (window.setLang) window.setLang(currentLang);
+                            } else {
+                                console.log("No user signed in (onAuthStateChanged), redirecting to login.");
+                                localStorage.removeItem('nunciaya-user-session');
+                                window.location.href = 'my-account.html';
+                            }
+                        });
+                        logoutButton.addEventListener('click', handleLogout);
+                    } else {
+                        throw new Error("Auth instance is null after wait loop");
+                    }
+                } else {
+                    if (window.firebaseInitializationError) { throw new Error(`Firebase init failed earlier: ${window.firebaseInitializationError}`); }
+                    else { throw new Error("Firebase instances not available after delay."); }
+                }
+
+                if (!auth && window.setLang) {
+                    window.setLang(currentLang);
+                }
+
+            } catch (error) {
+                console.error("Initialization error on profile page:", error);
+                adsLoadingMsg.style.display = 'none';
+                favoritesLoadingMsg.style.display = 'none'; // Hide this too
+                adsContainer.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error loading ads.</span><span class="lang-es">Error al cargar anuncios.</span></div>`;
+                favoritesContainer.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error loading favorites.</span><span class="lang-es">Error al cargar favoritos.</span></div>`;
+                profileName.value = 'Error';
+                profileEmail.value = 'Error';
+                profilePhone.value = 'Error';
+                logoutButton.disabled = true;
+                if (window.setLang) window.setLang(currentLang);
+            }
+        });
+    </script>
+
+</body>
+
+</html>
+

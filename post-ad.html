@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - Post Ad</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script> <!-- Storage SDK -->
+    
+    <!-- 
+    ============================================================
+    === NEW: CarQuery API scripts                          ===
+    ============================================================
+    -->
+    <script type="text/javascript" src="https://www.carqueryapi.com/js/jquery.min.js"></script>
+    <script type="text/javascript" src="https://www.carqueryapi.com/js/carquery.0.3.4.js"></script>
+    
+    <!-- 
+    ============================================================
+    === NEW: Load Costa Rica Location Data                   ===
+    ============================================================
+    -->
+    <script src="locations-cr.js" defer></script>
+    
+    <style>
+        /* Add styles for required labels */
+        .required-label::after {
+            content: '*';
+            color: red;
+            margin-left: 2px;
+        }
+        /* Ensure image previews don't overflow */
+        #image-preview-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+        /* Style for image preview container */
+         #image-preview-container > div {
+             position: relative;
+             aspect-ratio: 1 / 1; /* Make preview squares */
+             border: 1px solid #e5e7eb; /* gray-200 */
+             border-radius: 0.375rem; /* rounded-md */
+             overflow: hidden;
+         }
+         #image-preview-container .remove-image-btn {
+             position: absolute;
+             top: 0.25rem;
+             right: 0.25rem;
+             background-color: rgba(0, 0, 0, 0.6);
+             color: white;
+             border-radius: 999px;
+             width: 1.5rem;
+             height: 1.5rem;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             font-weight: bold;
+             font-family: sans-serif;
+             cursor: pointer;
+             line-height: 1;
+             padding-bottom: 2px;
+         }
+         #image-preview-container .remove-image-btn:hover {
+             background-color: rgba(220, 38, 38, 0.8); /* red-600 */
+         }
+         /* Styles for Drop Zone */
+        #drop-zone {
+             border: 2px dashed #D1D5DB; /* gray-300 */
+             border-radius: 0.5rem; /* rounded-lg */
+             padding: 1rem;
+             text-align: center;
+             cursor: pointer;
+             transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+        #drop-zone.dragover {
+             border-color: #2563EB; /* blue-600 */
+             background-color: #EFF6FF; /* blue-50 */
+        }
+    </style>
+
+</head>
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-3xl py-8">
+        <h2 class="text-3xl font-bold mb-6" id="page-title">
+            <span class="lang-en">Post New Ad</span>
+            <span class="lang-es">Publicar Nuevo Anuncio</span>
+        </h2>
+
+        <form id="post-ad-form" class="bg-white p-6 rounded-md shadow-sm border border-gray-200 space-y-4" novalidate>
+
+             <!-- Category and SubCategory Selectors --> 
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-700 required-label">
+                    <span class="lang-en">Category</span>
+                    <span class="lang-es">Categoría</span>
+                </label>
+                <select id="category" name="category" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="" disabled selected>-- Select Category --</option>
+                     <!-- Options populated by JS --> 
+                </select>
+            </div>
+            <div>
+                <label for="subCategory" class="block text-sm font-medium text-gray-700 required-label">
+                    <span class="lang-en">Sub-Category</span>
+                    <span class="lang-es">Subcategoría</span>
+                </label>
+                <select id="subCategory" name="subCategory" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-gray-100">
+                    <option value="" disabled selected>-- Select Category First --</option>
+                     <!-- Options populated by JS --> 
+                </select>
+            </div>
+
+            <!-- 
+            ============================================================
+            === NEW: Dynamic Location Selectors                      ===
+            ============================================================
+            -->
+            <div>
+                 <label for="zone" class="block text-sm font-medium text-gray-700 required-label">
+                     <span class="lang-en">Zone / Province</span>
+                     <span class="lang-es">Zona / Provincia</span>
+                 </label>
+                 <select id="zone" name="zone" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                     <option value="" disabled selected>-- Select Zone --</option>
+                     <!-- Options populated by location-cr.js -->
+                 </select>
+            </div>
+            <div>
+                 <label for="canton" class="block text-sm font-medium text-gray-700 required-label">
+                     <span class="lang-en">Canton</span>
+                     <span class="lang-es">Cantón</span>
+                 </label>
+                 <select id="canton" name="canton" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-gray-100">
+                     <option value="" disabled selected>-- Select Province First --</option>
+                 </select>
+            </div>
+             <div>
+                 <label for="district" class="block text-sm font-medium text-gray-700 required-label">
+                     <span class="lang-en">District</span>
+                     <span class="lang-es">Distrito</span>
+                 </label>
+                 <select id="district" name="district" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-gray-100">
+                     <option value="" disabled selected>-- Select Canton First --</option>
+                 </select>
+            </div>
+
+
+             <!-- Dynamic Filters Placeholder --> 
+            <div id="dynamic-filters-container" class="space-y-4 border-t border-gray-200 pt-4 mt-4" style="display: none;">
+                 <!-- Dynamic filters are added here --> 
+            </div>
+
+
+             <!-- Title (Bilingual) - Removed 'required' --> 
+            <div class="border-t border-gray-200 pt-4">
+                <label class="block text-sm font-medium text-gray-700 required-label">
+                    <span class="lang-en">Ad Title</span>
+                    <span class="lang-es">Título del Anuncio</span>
+                </label>
+                 <p class="text-xs text-gray-500">
+                     <span class="lang-en">Required in at least one language.</span>
+                     <span class="lang-es">Requerido en al menos un idioma.</span>
+                 </p>
+                <div class="mt-1 space-y-2">
+                    <input type="text" id="title_en" name="title_en" placeholder="Title (English)" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm lang-en">
+                    <input type="text" id="title_es" name="title_es" placeholder="Título (Español)" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm lang-es">
+                </div>
+            </div>
+
+             <!-- Description (Bilingual) - Removed 'required' --> 
+             <div>
+                <label class="block text-sm font-medium text-gray-700 required-label">
+                    <span class="lang-en">Description</span>
+                    <span class="lang-es">Descripción</span>
+                </label>
+                <p class="text-xs text-gray-500">
+                     <span class="lang-en">Required in at least one language.</span>
+                     <span class="lang-es">Requerido en al menos un idioma.</span>
+                 </p>
+                <div class="mt-1 space-y-2">
+                    <textarea id="description_en" name="description_en" rows="4" placeholder="Description (English)" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm lang-en"></textarea>
+                    <textarea id="description_es" name="description_es" rows="4" placeholder="Descripción (Español)" class="block w-full p-2 border border-gray-300 rounded-md shadow-sm lang-es"></textarea>
+                </div>
+            </div>
+
+             <!-- Price with Currency --> 
+            <div>
+                 <label for="price" class="block text-sm font-medium text-gray-700">
+                     <span class="lang-en">Price</span>
+                     <span class="lang-es">Precio</span>
+                 </label>
+                 <div class="mt-1 flex rounded-md shadow-sm">
+                     <input type="number" id="price" name="price" placeholder="50000" class="flex-grow block w-full p-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" min="0" step="any">
+                     <select id="currency" name="currency" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                         <option value="crc">CRC ₡</option>
+                         <option value="usd">USD $</option>
+                     </select>
+                 </div>
+            </div>
+
+             <!-- Image Upload Section with Drop Zone --> 
+            <div class="border-t border-gray-200 pt-4">
+                <label class="block text-sm font-medium text-gray-700">
+                    <span class="lang-en">Images (Optional, up to 5)</span>
+                    <span class="lang-es">Imágenes (Opcional, hasta 5)</span>
+                </label>
+                 <!-- Drop Zone Area --> 
+                <div id="drop-zone" class="mt-1 flex flex-col items-center">
+                     <p class="text-gray-500 text-sm mb-2">
+                         <span class="lang-en">Drag & drop images here, or click button below</span>
+                         <span class="lang-es">Arrastre y suelte imágenes aquí, o haga clic en el botón de abajo</span>
+                     </p>
+                     <label for="images" class="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                         <svg class="w-5 h-5 mr-2 -ml-1 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                             <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                         </svg>
+                         <span class="lang-en">Select Files</span>
+                         <span class="lang-es">Seleccionar Archivos</span>
+                     </label>
+                    <input type="file" id="images" name="images" multiple accept="image/png, image/jpeg, image/gif" class="sr-only">
+                    <div id="image-preview-container" class="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-2 w-full">
+                         <!-- Previews will be added here --> 
+                    </div>
+                </div>
+                 <p class="mt-1 text-xs text-gray-500 text-center">
+                     <span class="lang-en">Max file size 2MB each. PNG, JPG, GIF only.</span>
+                     <span class="lang-es">Tamaño máx. 2MB cada una. Solo PNG, JPG, GIF.</span>
+                 </p>
+            </div>
+
+
+             <!-- Contact Info Section --> 
+            <div class="border-t border-gray-200 pt-4">
+                 <h3 class="text-lg font-medium text-gray-800">
+                     <span class="lang-en">Contact Information</span>
+                     <span class="lang-es">Información de Contacto</span>
+                 </h3>
+                 <p class="text-xs text-gray-500 mb-2">
+                    <span class="lang-en">Provide at least one contact method.</span>
+                    <span class="lang-es">Proporcione al menos un método de contacto.</span>
+                 </p>
+                 <div class="space-y-2">
+                     <div>
+                         <label for="contactPhone" class="block text-sm font-medium text-gray-700">
+                             <span class="lang-en">Contact Phone</span>
+                             <span class="lang-es">Teléfono de Contacto</span>
+                         </label>
+                         <input type="tel" id="contactPhone" name="contactPhone" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                     </div>
+                      <div>
+                         <label for="contactEmail" class="block text-sm font-medium text-gray-700">
+                             <span class="lang-en">Contact Email</span>
+                             <span class="lang-es">Correo de Contacto</span>
+                         </label>
+                         <input type="email" id="contactEmail" name="contactEmail" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                     </div>
+                 </div>
+
+                 <!-- Contact Preferences --> 
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 required-label">
+                        <span class="lang-en">Preferred Contact Method(s)</span>
+                        <span class="lang-es">Método(s) de Contacto Preferido(s)</span>
+                    </label>
+                    <p class="text-xs text-gray-500">
+                        <span class="lang-en">Select at least one. This is how people will contact you.</span>
+                        <span class="lang-es">Seleccione al menos uno. Así es como la gente lo contactará.</span>
+                    </p>
+                    <div class="mt-2 space-y-2">
+                        <div class="flex items-center">
+                            <input id="pref-phone" name="pref-phone" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <label for="pref-phone" class="ml-3 block text-sm text-gray-900">
+                                <span class="lang-en">Phone Call</span>
+                                <span class="lang-es">Llamada Telefónica</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="pref-whatsapp" name="pref-whatsapp" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <label for="pref-whatsapp" class="ml-3 block text-sm text-gray-900">
+                                WhatsApp
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input id="pref-email" name="pref-email" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <label for="pref-email" class="ml-3 block text-sm text-gray-900">
+                                <span class="lang-en">Email</span>
+                                <span class="lang-es">Correo Electrónico</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Message & Progress Areas --> 
+            <div id="message-area" class="text-center text-sm"></div>
+            <div id="upload-progress-area" class="text-center text-sm text-blue-600" style="display: none;"></div>
+
+
+             <!-- Submit Button --> 
+            <div class="pt-4">
+                <button type="submit" id="submit-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="lang-en">Post Your Ad</span>
+                    <span class="lang-es">Publicar Anuncio</span>
+                </button>
+            </div>
+
+        </form>
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Main Application Script -->
+    <script src="app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // --- 1. Page Elements & State ---
+        const pageTitle = document.getElementById('page-title');
+        const categorySelect = document.getElementById('category');
+        const subCategorySelect = document.getElementById('subCategory');
+        const zoneSelect = document.getElementById('zone'); 
+        const cantonSelect = document.getElementById('canton');
+        const districtSelect = document.getElementById('district');
+        const dynamicFiltersContainer = document.getElementById('dynamic-filters-container');
+        const postAdForm = document.getElementById('post-ad-form');
+        const messageArea = document.getElementById('message-area');
+        const submitButton = document.getElementById('submit-button');
+        const contactPhoneInput = document.getElementById('contactPhone');
+        const contactEmailInput = document.getElementById('contactEmail');
+        const imageInput = document.getElementById('images');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const uploadProgressArea = document.getElementById('upload-progress-area');
+        const dropZone = document.getElementById('drop-zone');
+        const titleEnInput = document.getElementById('title_en');
+        const titleEsInput = document.getElementById('title_es');
+        const descriptionEnInput = document.getElementById('description_en');
+        const descriptionEsInput = document.getElementById('description_es');
+        const prefPhone = document.getElementById('pref-phone');
+        const prefWhatsApp = document.getElementById('pref-whatsapp');
+        const prefEmail = document.getElementById('pref-email');
+
+
+        let currentLang = 'es';
+        let db;
+        let auth;
+        let storage;
+        let selectedFiles = []; // For new uploads
+        
+        let editMode = false;
+        let editAdId = null;
+        let existingImageUrls = []; // For images already on the ad
+        let editListingData = null; // Store the original ad data
+
+        const pageSpecificText = {
+             'title_en': { en: 'Title (English)', es: 'Title (English)'},
+             'title_es': { en: 'Título (Español)', es: 'Título (Español)'},
+             'description_en': { en: 'Description (English)', es: 'Description (English)'},
+             'description_es': { en: 'Descripción (Español)', es: 'Descripción (Español)'},
+             'price': { en: '50000', es: '50000'}
+        };
+
+        // --- 2. Category Data (NOW FULLY UPDATED) ---
+        const categoryData = {
+            housing: {
+                en: "Housing", es: "Vivienda", subCategories: {
+                    apartments: { en: "Apartments / Housing", es: "Apartamentos / Casas", filters: [
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                    ] },
+                    rentalswanted: { en: "Rentals Wanted", es: "Busco Alquiler", filters: [
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                    ] },
+                    roomsShared: { en: "Rooms / Shared", es: "Cuartos / Compartido", filters: [] },
+                    sublets: { en: "Sublets / Temporary", es: "Subarriendo / Temporal", filters: [
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                    ] },
+                    realEstate: { en: "Real Estate for Sale", es: "Bienes Raíces Venta", filters: [
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                    ] },
+                    vacationRentals: { en: "Vacation Rentals", es: "Alquileres Vacaciones", filters: [
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                    ] },
+                }
+            },
+            forSale: {
+                en: "For Sale", es: "En Venta", subCategories: {
+                    autoParts: { en: "Auto Parts", es: "Repuestos", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } },
+                        { type: 'carQueryGroup', carQueryBody: null } // This will render the 4 car dropdowns
+                    ]},
+                    carsTrucks: { en: "Cars & Trucks", es: "Carros y Camiones", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } },
+                        { type: 'carQueryGroup', carQueryBody: null } // This will render the 4 car dropdowns
+                    ]},
+                    electronics: { en: "Electronics", es: "Electrónicos", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } },
+                        { id: 'type', label: {en:'Type', es:'Tipo'}, type: 'select', options: { 
+                            '': {en: 'Select Type', es: 'Seleccione Tipo'}, 
+                            'cellphones': {en:'Cell Phones', es:'Celulares'}, 
+                            'computers': {en:'Computers', es:'Computadoras'}, 
+                            'tvs': {en:'TVs', es:'Televisores'}, 
+                            'audio_video': {en:'Audio & Video', es:'Audio y Video'}, 
+                            'gaming': {en:'Video Games', es:'Videojuegos'}, 
+                            'cell_accessories': {en:'Cell Accessories', es:'Acc. Celulares'}, 
+                            'comp_accessories': {en:'Comp. Accessories', es:'Acc. Computo'}, 
+                            'other': {en:'Other', es:'Otro'} 
+                        } }
+                    ]},
+                    furniture: { en: "Furniture", es: "Muebles", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } }
+                    ]},
+                    household: { en: "Household", es: "Artículos del Hogar", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } }
+                    ]},
+                    motorcycles: { en: "Motorcycles", es: "Motocicletas", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } },
+                        { type: 'carQueryGroup', carQueryBody: 'Motorcycle' } // This renders car dropdowns for MOTOS
+                    ]},
+                    free: { en: "Free", es: "Gratis", filters: [] },
+                }
+            },
+            jobs: {
+                en: "Jobs", es: "Empleo", subCategories: {
+                    adminOffice: { en: "Admin / Office", es: "Admin / Oficina", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                    ]},
+                    customerService: { en: "Customer Service", es: "Servicio al Cliente", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                    ]},
+                    hospitality: { en: "Hospitality / Hotel", es: "Hotelería / Hospitalidad", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                    ]},
+                    salesMarketing: { en: "Sales / Marketing", es: "Ventas / Mercadeo", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                    ]},
+                    softwareIT: { en: "Software / IT", es: "Software / TI", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                    ]},
+                    tourism: { en: "Tourism", es: "Turismo", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                    ]},
+                    generalLabor: { en: "General Labor", es: "Trabajo General", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                    ]},
+                }
+            },
+             services: {
+                 en: "Services", es: "Servicios", subCategories: {
+                     automotive: { en: "Automotive", es: "Automotriz", filters: [] },
+                     computer: { en: "Computer", es: "Computación", filters: [] },
+                     financial: { en: "Financial", es: "Financiero", filters: [] },
+                     legal: { en: "Legal", es: "Legal", filters: [] },
+                     lessons: { en: "Lessons & Tutoring", es: "Lecciones & Tutorías", filters: [] },
+                     realestate_service: { en: "Real Estate", es: "Bienes Raíces", filters: [] }, // Note: Differentiated key
+                     skilledtrade: { en: "Skilled Trade", es: "Oficios", filters: [] },
+                 }
+             },
+             community: {
+                 en: "Community", es: "Comunidad", subCategories: {
+                     activities: { en: "Activities", es: "Actividades", filters: [] },
+                     classes: { en: "Classes", es: "Clases", filters: [] },
+                     events: { en: "Events", es: "Eventos", filters: [] },
+                     localnews: { en: "Local News", es: "Noticias Locales", filters: [] },
+                     lostfound: { en: "Lost & Found", es: "Perdidos y Encontrados", filters: [] },
+                     volunteers: { en: "Volunteers", es: "Voluntarios", filters: [] },
+                 }
+             },
+             personals: {
+                 en: "Personals", es: "Personales", subCategories: {
+                     strictlyplatonic: { en: "Strictly Platonic", es: "Estrictamente Platónico", filters: [] },
+                     womenseekingmen: { en: "Women Seek Men", es: "Mujeres Buscan Hombres", filters: [] },
+                     menseekingwomen: { en: "Men Seek Women", es: "Hombres Buscan Mujeres", filters: [] },
+                     menseekingmen: { en: "Men Seek Men", es: "Hombres Buscan Hombres", filters: [] },
+                     womenseekingwomen: { en: "Women Seek Women", es: "Mujeres Buscan Mujeres", filters: [] },
+                 }
+             }
+        };
+
+
+        // --- 3. Language & Initialization ---
+        const originalSetLang = window.setLang;
+        window.setLang = (lang, skipPopulate = false) => {
+             currentLang = lang;
+             if (originalSetLang) {
+                 originalSetLang(lang, pageSpecificText); 
+             }
+            
+             document.querySelectorAll('#post-ad-form input.lang-en, #post-ad-form input.lang-es, #post-ad-form textarea.lang-en, #post-ad-form textarea.lang-es').forEach(el => {
+                 const isBlock = el.tagName === 'TEXTAREA' || el.classList.contains('block');
+                  if(el.classList.contains(`lang-${lang}`)) {
+                      el.style.display = 'block';
+                      el.style.width = '100%';
+                 } else {
+                      el.style.display = 'none';
+                 }
+             });
+
+             if (!skipPopulate) {
+                 const selectedCat = categorySelect.value;
+                 const selectedSubCat = subCategorySelect.value;
+                 const selectedZone = zoneSelect.value;
+                 const selectedCanton = cantonSelect.value;
+                 const selectedDistrict = districtSelect.value;
+
+                 populateCategories();
+                 categorySelect.value = selectedCat; 
+
+                 if(selectedCat) {
+                     populateSubCategories(selectedCat);
+                     subCategorySelect.value = selectedSubCat; 
+                 }
+                 if(selectedCat && selectedSubCat) {
+                      renderDynamicFilters(selectedCat, selectedSubCat, true); // Pass true to skip re-populating edit data
+                 }
+                
+                 populateProvinces();
+                 zoneSelect.value = selectedZone; 
+                
+                 if (selectedZone) {
+                     populateCantons(selectedZone);
+                     cantonSelect.value = selectedCanton; 
+                 }
+                 if (selectedCanton) {
+                     populateDistricts(selectedZone, selectedCanton);
+                     districtSelect.value = selectedDistrict; 
+                 }
+             }
+             displayMessage(messageArea.dataset.messageCode || '', messageArea.dataset.messageType || '');
+        };
+
+
+        // --- 4. Dynamic Dropdowns & Filters ---
+        function populateCategories() {
+            const currentSelectedCategory = categorySelect.value;
+            categorySelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Categoría' : 'Select Category'} --</option>`;
+            for (const catKey in categoryData) {
+                const category = categoryData[catKey];
+                const option = document.createElement('option');
+                option.value = catKey;
+                option.textContent = category[currentLang];
+                categorySelect.appendChild(option);
+            }
+            if (currentSelectedCategory && categoryData[currentSelectedCategory]) {
+                categorySelect.value = currentSelectedCategory;
+            } else {
+                subCategorySelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Categoría Primero' : 'Select Category First'} --</option>`;
+                subCategorySelect.disabled = true;
+                subCategorySelect.classList.add('bg-gray-100');
+                dynamicFiltersContainer.style.display = 'none';
+                dynamicFiltersContainer.innerHTML = '';
+            }
+        }
+
+        function populateSubCategories(categoryKey) {
+            const category = categoryData[categoryKey];
+            if (!category) {
+                 subCategorySelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Error Categoría' : 'Category Error'} --</option>`;
+                 subCategorySelect.disabled = true; return;
+            };
+            const currentSelectedSubCategory = subCategorySelect.value;
+
+            subCategorySelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Subcategoría' : 'Select Sub-Category'} --</option>`;
+            for (const subCatKey in category.subCategories) {
+                const subCategory = category.subCategories[subCatKey];
+                const option = document.createElement('option');
+                option.value = subCatKey;
+                option.textContent = subCategory[currentLang];
+                subCategorySelect.appendChild(option);
+            }
+            subCategorySelect.disabled = false;
+            subCategorySelect.classList.remove('bg-gray-100');
+
+            if(currentSelectedSubCategory && category.subCategories[currentSelectedSubCategory]) {
+                subCategorySelect.value = currentSelectedSubCategory;
+            } else {
+                 dynamicFiltersContainer.style.display = 'none';
+                 dynamicFiltersContainer.innerHTML = '';
+            }
+        }
+
+        /**
+        * NEW: Renders all dynamic filters, including CarQuery
+        */
+        function renderDynamicFilters(categoryKey, subCategoryKey, skipEditPopulation = false) {
+             const subCategory = categoryData[categoryKey]?.subCategories[subCategoryKey];
+             dynamicFiltersContainer.innerHTML = ''; // Clear previous filters
+
+             if (!subCategory || !subCategory.filters || subCategory.filters.length === 0) {
+                 dynamicFiltersContainer.style.display = 'none';
+                 return;
+             }
+
+             dynamicFiltersContainer.innerHTML = `<h3 class="text-lg font-medium text-gray-800"><span class="lang-en">Details</span><span class="lang-es">Detalles</span></h3>`;
+
+             subCategory.filters.forEach(filter => {
+                 const div = document.createElement('div');
+                 div.className = 'mb-2';
+
+                 if (filter.type === 'select') {
+                     div.appendChild(createLabel(filter));
+                     div.appendChild(createSelect(filter));
+                 } else if (filter.type === 'text') {
+                     div.appendChild(createLabel(filter));
+                     div.appendChild(createInput(filter));
+                 } else if (filter.type === 'carQueryGroup') {
+                    // This creates the 4 dropdowns and initializes CarQuery
+                     div.appendChild(createCarQueryGroup(filter));
+                 }
+                 dynamicFiltersContainer.appendChild(div);
+             });
+
+             dynamicFiltersContainer.style.display = 'block';
+             if (window.setLang) window.setLang(currentLang, true); // Re-run lang toggle
+             
+             // If in edit mode, populate the values *after* they are rendered
+             if (editMode && editListingData && !skipEditPopulation) {
+                populateDynamicFilterValues(editListingData);
+             }
+        }
+
+        function createLabel(filter) {
+            const label = document.createElement('label');
+            label.htmlFor = `filter-${filter.id}`;
+            label.className = 'block text-sm font-medium text-gray-700';
+            label.innerHTML = `<span class="lang-en">${filter.label?.en || filter.id}</span><span class="lang-es">${filter.label?.es || filter.id}</span>`;
+            return label;
+        }
+
+        function createSelect(filter) {
+            const select = document.createElement('select');
+            select.id = `filter-${filter.id}`;
+            select.name = `filter_${filter.id}`; // IMPORTANT for data collection
+            select.className = 'mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm';
+            for (const value in filter.options) {
+                const optionData = filter.options[value];
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = optionData[currentLang];
+                select.appendChild(option);
+            }
+            return select;
+        }
+
+        function createInput(filter) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = `filter-${filter.id}`;
+            input.name = `filter_${filter.id}`; // IMPORTANT for data collection
+            input.className = 'mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm';
+            if(filter.placeholder) {
+                input.placeholder = filter.placeholder[currentLang] || '';
+            }
+            return input;
+        }
+
+        /**
+        * NEW: Creates the CarQuery dropdowns and initializes them
+        */
+        function createCarQueryGroup(filter) {
+            const fragment = document.createDocumentFragment(); // Create a fragment
+            const wrapper = document.createElement('div');
+            wrapper.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4';
+            
+            const carQueryIds = ['year', 'make', 'model', 'trim'];
+            const labels = {
+                year: { en: 'Year', es: 'Año' },
+                make: { en: 'Make', es: 'Marca' },
+                model: { en: 'Model', es: 'Modelo' },
+                trim: { en: 'Trim', es: 'Versión' }
+            };
+
+            carQueryIds.forEach(id => {
+                const div = document.createElement('div');
+                const label = document.createElement('label');
+                label.htmlFor = `filter-${id}`;
+                label.className = 'block text-sm font-medium text-gray-700';
+                label.innerHTML = `<span class="lang-en">${labels[id].en}</span><span class="lang-es">${labels[id].es}</span>`;
+                
+                const select = document.createElement('select');
+                select.id = `filter-${id}`; // Use this ID for CarQuery
+                select.name = `filter_${id}`; // Use this name for form submission
+                select.className = 'mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm';
+                
+                div.appendChild(label);
+                div.appendChild(select);
+                wrapper.appendChild(div);
+            });
+
+            // Add the wrapper to the fragment
+            fragment.appendChild(wrapper);
+
+            // --- NEW: Add the note underneath the wrapper ---
+            const note = document.createElement('p');
+            note.className = 'text-xs text-gray-500 mt-2'; // Add top margin
+            note.innerHTML = `
+                <span class="lang-en">If you do not see your vehicle details above just leave it blank</span>
+                <span class="lang-es">Si no ve los detalles de su vehículo arriba, déjelo en blanco</span>
+            `;
+            fragment.appendChild(note);
+            // --- End NEW ---
+
+            // Run CarQuery init *after* elements are in the DOM
+            // We use setTimeout to ensure they are rendered first
+            setTimeout(() => {
+                try {
+                    console.log("Initializing CarQuery for post-ad...");
+                    var carquery = new CarQuery();
+                    carquery.init();
+                    carquery.year_select_min = 1980;
+                    var currentYear = new Date().getFullYear();
+                    carquery.year_select_max = currentYear + 1;
+                    
+                    // Apply body filter if one exists (e.g., 'Motorcycle')
+                    const filters = { sold_in_us: false };
+                    if (filter.carQueryBody) {
+                        filters.body = filter.carQueryBody;
+                        console.log(`Applying CarQuery body filter: ${filter.carQueryBody}`);
+                    }
+                    carquery.setFilters(filters);
+                    
+                    // Init using the IDs we just created
+                    carquery.initYearMakeModelTrim('filter-year', 'filter-make', 'filter-model', 'filter-trim');
+                    console.log("CarQuery initialized.");
+
+                    // If we are in edit mode, now we can try to set the values
+                    if (editMode && editListingData) {
+                        populateCarQueryValues(editListingData);
+                    }
+                } catch(e) {
+                    console.error("Error initializing CarQuery:", e);
+                    wrapper.innerHTML = `<p class="text-red-600 col-span-4"><span class="lang-en">Error loading vehicle filters.</span><span class="lang-es">Error al cargar filtros de vehículo.</span></p>`;
+                }
+            }, 0);
+
+            return fragment; // Return the fragment
+        }
+
+        // ---
+        // ============================================================
+        // === UPDATED: Location Dropdown Functions (to match data) ===
+        // ============================================================
+        // ---
+
+        function populateProvinces() {
+            if (typeof costaRicaLocations === 'undefined') return;
+            const currentSelected = zoneSelect.value;
+            zoneSelect.innerHTML = `<option value="" disabled>-- ${currentLang === 'es' ? 'Seleccione Provincia' : 'Select Province'} --</option>`;
+            
+            for (const provinceKey in costaRicaLocations) {
+                const province = costaRicaLocations[provinceKey];
+                const option = document.createElement('option');
+                option.value = provinceKey;
+                option.textContent = province.nombre; 
+                zoneSelect.appendChild(option);
+            }
+            zoneSelect.value = currentSelected; // Restore selection
+        }
+
+        function populateCantons(provinceKey) {
+            if (typeof costaRicaLocations === 'undefined') return;
+            const currentSelected = cantonSelect.value;
+            cantonSelect.innerHTML = `<option value="" disabled>-- ${currentLang === 'es' ? 'Seleccione Cantón' : 'Select Canton'} --</option>`;
+            districtSelect.innerHTML = `<option value="" disabled>-- ${currentLang === 'es' ? 'Seleccione Cantón Primero' : 'Select Canton First'} --</option>`;
+            districtSelect.disabled = true;
+            districtSelect.classList.add('bg-gray-100');
+
+            if (!provinceKey || !costaRicaLocations[provinceKey]) {
+                cantonSelect.disabled = true;
+                cantonSelect.classList.add('bg-gray-100');
+                return;
+            }
+
+            const cantones = costaRicaLocations[provinceKey].cantones;
+            for (const cantonKey in cantones) {
+                const canton = cantones[cantonKey];
+                const option = document.createElement('option');
+                option.value = cantonKey;
+                option.textContent = canton.nombre;
+                cantonSelect.appendChild(option);
+            }
+            cantonSelect.disabled = false;
+            cantonSelect.classList.remove('bg-gray-100');
+            cantonSelect.value = currentSelected; // Restore selection
+        }
+
+        function populateDistricts(provinceKey, cantonKey) {
+            if (typeof costaRicaLocations === 'undefined') return;
+            const currentSelected = districtSelect.value;
+            districtSelect.innerHTML = `<option value="" disabled>-- ${currentLang === 'es' ? 'Seleccione Distrito' : 'Select District'} --</option>`;
+            
+            if (!provinceKey || !cantonKey || !costaRicaLocations[provinceKey]?.cantones[cantonKey]) {
+                districtSelect.disabled = true;
+                districtSelect.classList.add('bg-gray-100');
+                return;
+            }
+
+            const distritos = costaRicaLocations[provinceKey].cantones[cantonKey].distritos;
+            distritos.forEach(distritoName => {
+                const option = document.createElement('option');
+                option.value = distritoName; 
+                option.textContent = distritoName;
+                districtSelect.appendChild(option);
+            });
+            districtSelect.disabled = false;
+            districtSelect.classList.remove('bg-gray-100');
+            districtSelect.value = currentSelected; // Restore selection
+        }
+
+
+        // Event listeners for dropdowns
+        categorySelect.addEventListener('change', (e) => {
+            populateSubCategories(e.target.value);
+            // Clear filters when category changes
+            dynamicFiltersContainer.style.display = 'none';
+            dynamicFiltersContainer.innerHTML = '';
+        });
+        subCategorySelect.addEventListener('change', (e) => {
+            renderDynamicFilters(categorySelect.value, e.target.value);
+        });
+
+        zoneSelect.addEventListener('change', (e) => {
+            populateCantons(e.target.value);
+        });
+        cantonSelect.addEventListener('change', (e) => {
+            populateDistricts(zoneSelect.value, e.target.value);
+        });
+
+
+        // --- 5. Image Handling ---
+        imageInput.addEventListener('change', handleFileSelect);
+
+        // --- Drag and Drop Logic ---
+        function preventDefaults (e) { e.preventDefault(); e.stopPropagation(); }
+        function highlightDropZone(e) { dropZone.classList.add('dragover'); }
+        function unhighlightDropZone(e) { dropZone.classList.remove('dragover'); }
+        function handleDrop(e) {
+            preventDefaults(e);
+            unhighlightDropZone(e);
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            handleFileSelect({ target: { files: files } });
+        }
+        // Add Drop Zone Event Listeners
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+        ['dragenter', 'dragover'].forEach(eventName => dropZone.addEventListener(eventName, highlightDropZone, false));
+        ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, unhighlightDropZone, false));
+        dropZone.addEventListener('drop', handleDrop, false);
+        // --- End Drag and Drop ---
+
+        function handleFileSelect(event) {
+             const files = event.target.files;
+             if (!files) return;
+
+             const totalAllowed = 5;
+             const existingCount = existingImageUrls.length;
+             const newAllowedCount = totalAllowed - existingCount;
+
+             if (files.length > newAllowedCount) {
+                 displayMessage('max-5-images-total', 'error', { total: totalAllowed, existing: existingCount, new: newAllowedCount });
+             }
+
+             const validFiles = Array.from(files).filter((file, index) => {
+                 let isValid = true;
+                 if (!['image/png', 'image/jpeg', 'image/gif'].includes(file.type)) { displayMessage('invalid-type', 'error', { index: index + 1 }); isValid = false; }
+                 if (file.size > 2 * 1024 * 1024) { displayMessage('size-limit', 'error', { index: index + 1 }); isValid = false; }
+                 return isValid;
+             });
+            
+             // Add only the allowed number of new files
+             selectedFiles = validFiles.slice(0, newAllowedCount);
+            
+             // Re-render all previews (existing + new)
+             renderImagePreviews();
+        }
+
+        function renderImagePreviews() {
+            imagePreviewContainer.innerHTML = '';
+            
+            // 1. Render existing URLs
+            existingImageUrls.forEach((url, index) => {
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'relative aspect-square';
+                imgContainer.innerHTML = `
+                    <img src="${url}" alt="Existing image ${index + 1}" class="object-cover w-full h-full">
+                    <button type="button" class="remove-image-btn" data-index="${index}" title="Remove existing image">&times;</button>
+                `;
+                imgContainer.querySelector('.remove-image-btn').addEventListener('click', handleRemoveExistingImage);
+                imagePreviewContainer.appendChild(imgContainer);
+            });
+
+            // 2. Render new file previews
+            selectedFiles.forEach((file, index) => {
+                 const reader = new FileReader();
+                 reader.onload = (e) => {
+                     const imgContainer = document.createElement('div');
+                     imgContainer.className = 'relative aspect-square opacity-75'; // Mark as new
+                     imgContainer.innerHTML = `
+                         <img src="${e.target.result}" alt="New preview ${index + 1}" class="object-cover w-full h-full">
+                         <button type="button" class="remove-image-btn" data-index="${index}" title="Remove new image">&times;</button>
+                     `;
+                     imgContainer.querySelector('.remove-image-btn').addEventListener('click', handleRemoveNewImage);
+                     imagePreviewContainer.appendChild(imgContainer);
+                 };
+                 reader.readAsDataURL(file);
+            });
+        }
+        
+        async function uploadImages(files, userId) {
+             if (!storage || files.length === 0) return [];
+
+             const uploadPromises = files.map((file, index) => {
+                 return new Promise((resolve, reject) => {
+                     const fileExt = file.name.split('.').pop() || 'jpg';
+                     const uniqueFileName = `${userId}/${Date.now()}-${index}.${fileExt}`;
+                     const storageRef = storage.ref(`listing-images/${uniqueFileName}`);
+                     const uploadTask = storageRef.put(file);
+
+                     uploadTask.on('state_changed',
+                         (snapshot) => {
+                             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                              uploadProgressArea.textContent = `${currentLang === 'es' ? 'Subiendo imagen' : 'Uploading image'} ${index + 1}/${files.length}: ${progress.toFixed(0)}%`;
+                             uploadProgressArea.style.display = 'block';
+                         },
+                         (error) => {
+                             console.error(`Upload failed:`, error.code);
+                              let errorCode = 'image-upload-failed';
+                              switch (error.code) {
+                                  case 'storage/unauthorized': errorCode = 'image-auth-error'; break;
+                                  case 'storage/canceled': errorCode = 'image-upload-cancelled'; break;
+                                  default: errorCode = 'image-upload-failed'; break;
+                              }
+                             reject({ code: errorCode, originalError: error});
+                         },
+                         async () => {
+                             try {
+                                 const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+                                 resolve(downloadURL);
+                             } catch(urlError) {
+                                 reject({ code: 'image-url-failed', originalError: urlError});
+                             }
+                         }
+                     );
+                 });
+             });
+
+             try {
+                 const downloadURLs = await Promise.all(uploadPromises);
+                 uploadProgressArea.style.display = 'none';
+                 return downloadURLs;
+             } catch (error) {
+                 uploadProgressArea.style.display = 'none';
+                 throw error;
+             }
+         }
+
+
+        // --- 6. Form Submission ---
+         function displayMessage(code, type = 'error', details = {}) {
+             const messages = {
+                 en: {
+                     'required-fields': 'Please fill out all required fields (*).',
+                     'bilingual-title-required': 'Please provide an Ad Title in at least one language.',
+                     'bilingual-desc-required': 'Please provide a Description in at least one language.',
+                     'contact-required': 'Please provide either a phone number or an email address.',
+                     'contact-pref-required': 'Please select at least one contact method.', // New message
+                     'max-5-images': 'Maximum 5 images allowed.',
+                     'max-5-images-total': (d) => `You can only have ${d.total} images total. You already have ${d.existing}, so you can only add ${d.new} more.`,
+                     'invalid-type': (d) => `File ${d.index} has an invalid type. Only PNG, JPG, GIF allowed.`,
+                     'size-limit': (d) => `File ${d.index} exceeds the 2MB size limit.`,
+                     'ad-posted-success': 'Ad posted successfully! It may take a moment to appear.',
+                     'ad-updated-success': 'Ad updated successfully!', // NEW
+                     'edit-load-error': 'Error loading ad for editing. You may not be the owner.', // NEW
+                     'location-data-missing': 'Error: Location data (locations-cr.js) is missing. The form cannot be submitted.', // NEW
+                     'image-upload-failed': 'Failed to upload images. Please check connection and file types/sizes.',
+                      'image-auth-error': 'Permission denied during image upload. Please try logging in again.',
+                      'image-upload-cancelled': 'Image upload cancelled.',
+                      'image-url-failed': 'Could not get image URLs after upload.',
+                     'unknown-error': 'An unexpected error occurred.',
+                     'firestore-error': 'Failed to save ad details.',
+                     'auth-error': 'You must be logged in to post an ad.',
+                     'firebase-not-ready': 'Connection not ready. Please wait and try again.'
+                 },
+                 es: {
+                      'required-fields': 'Por favor complete todos los campos requeridos (*).',
+                     'bilingual-title-required': 'Por favor proporcione un Título en al menos un idioma.',
+                     'bilingual-desc-required': 'Por favor proporcione una Descripción en al menos un idioma.',
+                     'contact-required': 'Por favor proporcione un número de teléfono o una dirección de correo.',
+                     'contact-pref-required': 'Por favor seleccione al menos un método de contacto.', // New message
+                     'max-5-images': 'Se permiten máximo 5 imágenes.',
+                     'max-5-images-total': (d) => `Solo puede tener ${d.total} imágenes en total. Ya tiene ${d.existing}, así que solo puede agregar ${d.new} más.`,
+                     'invalid-type': (d) => `Archivo ${d.index} tiene un tipo inválido. Solo PNG, JPG, GIF permitidos.`,
+                     'size-limit': (d) => `Archivo ${d.index} excede el límite de 2MB.`,
+                     'ad-posted-success': '¡Anuncio publicado con éxito! Puede tardar un momento en aparecer.',
+                     'ad-updated-success': '¡Anuncio actualizado con éxito!', // NEW
+                     'edit-load-error': 'Error al cargar anuncio para editar. Es posible que no sea el propietario.', // NEW
+                     'location-data-missing': 'Error: Faltan datos de ubicación (locations-cr.js). El formulario no se puede enviar.', // NEW
+                     'image-upload-failed': 'Error al subir imágenes. Verifique la conexión y tipos/tamaños de archivo.',
+                      'image-auth-error': 'Permiso denegado durante la subida de imágenes. Intente iniciar sesión de nuevo.',
+                      'image-upload-cancelled': 'Subida de imagen cancelada.',
+                      'image-url-failed': 'No se pudo obtener la URL de la imagen después de subirla.',
+                     'unknown-error': 'Ocurrió un error inesperado.',
+                     'firestore-error': 'Error al guardar los detalles del anuncio.',
+                     'auth-error': 'Debe iniciar sesión para publicar un anuncio.',
+                     'firebase-not-ready': 'Conexión no lista. Por favor espere e intente de nuevo.'
+                 }
+             };
+             let messageText;
+             const messageTemplate = messages[currentLang][code];
+             if (typeof messageTemplate === 'function') { messageText = messageTemplate(details); }
+             else { messageText = messageTemplate || messages[currentLang]['unknown-error']; }
+
+             if (code) {
+                 messageArea.className = `text-center text-sm my-2 ${type === 'error' ? 'text-red-600' : 'text-green-600'}`;
+                 messageArea.textContent = messageText;
+                 messageArea.dataset.messageCode = code;
+                 messageArea.dataset.messageType = type;
+             } else {
+                  messageArea.textContent = '';
+                  messageArea.className = 'text-center text-sm my-2';
+                  messageArea.dataset.messageCode = '';
+                  messageArea.dataset.messageType = '';
+             }
+         }
+
+
+        /**
+        * UPDATED: handlePostAd to save all new filters
+        */
+        async function handlePostAd(event) {
+            event.preventDefault();
+            messageArea.textContent = '';
+            submitButton.disabled = true;
+
+            // Manual Validation
+            let isValid = true;
+            let firstInvalidElement = null;
+
+            // Check standard required fields
+            if (!postAdForm.checkValidity()) {
+                 isValid = false;
+                 if (!firstInvalidElement) firstInvalidElement = postAdForm.querySelector(':invalid:not([name="title_en"]):not([name="title_es"]):not([name="description_en"]):not([name="description_es"])');
+                 displayMessage('required-fields', 'error');
+            }
+
+            // Title
+             const titleEn = titleEnInput.value.trim();
+             const titleEs = titleEsInput.value.trim();
+             if (!titleEn && !titleEs) {
+                 isValid = false;
+                 if (!firstInvalidElement) firstInvalidElement = currentLang === 'en' ? titleEnInput : titleEsInput;
+                 displayMessage('bilingual-title-required', 'error');
+             }
+
+             // Description
+             const descriptionEn = descriptionEnInput.value.trim();
+             const descriptionEs = descriptionEsInput.value.trim();
+             if (!descriptionEn && !descriptionEs) {
+                 isValid = false;
+                 if (!firstInvalidElement) firstInvalidElement = currentLang === 'en' ? descriptionEnInput : descriptionEsInput;
+                 displayMessage('bilingual-desc-required', 'error');
+             }
+
+            // Contact Info
+            const phone = contactPhoneInput.value.trim();
+            const email = contactEmailInput.value.trim();
+            if (!phone && !email) {
+                 isValid = false;
+                 if (!firstInvalidElement) firstInvalidElement = contactPhoneInput;
+                 displayMessage('contact-required');
+            }
+            
+            // NEW: Contact Preference Validation
+            const isPrefPhone = prefPhone.checked;
+            const isPrefWhatsApp = prefWhatsApp.checked;
+            const isPrefEmail = prefEmail.checked;
+            if (!isPrefPhone && !isPrefWhatsApp && !isPrefEmail) {
+                 isValid = false;
+                 if (!firstInvalidElement) firstInvalidElement = prefPhone; // Focus first checkbox
+                 displayMessage('contact-pref-required');
+            }
+
+
+            if (!isValid) {
+                 submitButton.disabled = false;
+                 if (firstInvalidElement) {
+                     if(firstInvalidElement.classList.contains('lang-en') && currentLang !== 'en') {
+                          window.setLang('en', true); // Switch lang without populating
+                     } else if (firstInvalidElement.classList.contains('lang-es') && currentLang !== 'es') {
+                          window.setLang('es', true); // Switch lang without populating
+                     }
+                     setTimeout(() => firstInvalidElement.focus(), 0);
+                 }
+                 return;
+            }
+
+
+            if (!auth || !db || !storage) {
+                 displayMessage('firebase-not-ready');
+                 console.error("Firebase services not ready for posting ad.");
+                  submitButton.disabled = false;
+                 return;
+            }
+
+            const user = auth.currentUser;
+            if (!user) {
+                 displayMessage('auth-error');
+                 console.error("No user logged in.");
+                  submitButton.disabled = false;
+                 return;
+            }
+
+            // --- Gather Form Data ---
+            const formData = new FormData(postAdForm);
+            const priceValue = formData.get('price');
+            const currencyValue = formData.get('currency');
+            let formattedPrice = '';
+            if (priceValue) {
+                 formattedPrice = currencyValue === 'usd' ? `$${priceValue}` : `₡${priceValue}`;
+            }
+
+            const adData = {
+                 userId: user.uid,
+                 category: formData.get('category'),
+                 subCategory: formData.get('subCategory'),
+                 zone: formData.get('zone'),
+                 canton: formData.get('canton'),
+                 district: formData.get('district'),
+                 title_en: titleEn,
+                 title_es: titleEs,
+                 description_en: descriptionEn,
+                 description_es: descriptionEs,
+                 price: formattedPrice,
+                 contactPhone: phone,
+                 contactEmail: email,
+                 contactPreferences: [ // NEW
+                     ...(isPrefPhone ? ['phone'] : []),
+                     ...(isPrefWhatsApp ? ['whatsapp'] : []),
+                     ...(isPrefEmail ? ['email'] : [])
+                 ],
+                 imageUrls: [...existingImageUrls], // Start with existing images
+                 createdAt: (editMode && editListingData) ? editListingData.createdAt : firebase.firestore.Timestamp.now(), // Keep original date in edit mode
+                 status: (editMode && editListingData) ? editListingData.status : 'pending' // Keep status in edit mode
+            };
+
+            // --- NEW: Add dynamic filter data (for all types) ---
+            dynamicFiltersContainer.querySelectorAll('select, input').forEach(input => {
+                if (input.name.startsWith('filter_') && input.value) {
+                    const key = input.name.substring(7); // e.g., "rooms", "condition", "year"
+                    
+                    // For CarQuery, we need the TEXT, not the value (except for year)
+                    if (key === 'make' || key === 'model' || key === 'trim') {
+                        if (input.value) { // Make sure it's not the placeholder
+                            adData[key] = input.options[input.selectedIndex].text;
+                        }
+                    } else {
+                        // For all other filters (rooms, condition, year, etc.)
+                        adData[key] = input.value;
+                    }
+                }
+            });
+            // --- End NEW ---
+
+             // --- Image Upload & Save ---
+             try {
+                 if (selectedFiles.length > 0) {
+                     const newImageUrls = await uploadImages(selectedFiles, user.uid);
+                     adData.imageUrls.push(...newImageUrls); // Add new URLs
+                 }
+                
+                 if (editMode) {
+                   // --- UPDATE Existing Ad ---
+                   const docRef = db.collection("listings").doc(editAdId);
+                   await docRef.update(adData);
+                   console.log("Ad data updated in Firestore with ID:", editAdId);
+                   displayMessage('ad-updated-success', 'success');
+                   
+                   // Clear selected files, but keep existing ones
+                   selectedFiles = [];
+                   // Re-render previews to show all are now "existing"
+                   existingImageUrls = [...adData.imageUrls];
+                   renderImagePreviews();
+
+                 } else {
+                   // --- ADD New Ad ---
+                   const collectionRef = db.collection("listings");
+                   const docRef = await collectionRef.add(adData);
+                   console.log("Ad data saved to Firestore with ID:", docRef.id);
+                   displayMessage('ad-posted-success', 'success');
+                   
+                   // Reset form only on new post
+                   postAdForm.reset();
+                   imagePreviewContainer.innerHTML = '';
+                   selectedFiles = [];
+                   existingImageUrls = [];
+                   dynamicFiltersContainer.innerHTML = '';
+                   dynamicFiltersContainer.style.display = 'none';
+                   populateCategories();
+                   populateProvinces();
+                   cantonSelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Provincia Primero' : 'Select Province First'} --</option>`;
+                   cantonSelect.disabled = true;
+                   districtSelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Cantón Primero' : 'Select Canton First'} --</option>`;
+                   districtSelect.disabled = true;
+                 }
+
+             } catch (error) {
+                 console.error("Error during ad posting:", error);
+                 displayMessage(error?.code || 'firestore-error', 'error');
+             } finally {
+                  submitButton.disabled = false;
+                  uploadProgressArea.style.display = 'none';
+             }
+        }
+        
+        // ---
+        // ============================================================
+        // === NEW: Edit Mode Functions                           ===
+        // ============================================================
+        // ---
+        
+        /**
+        * Fetches ad data from Firestore and populates the form
+        */
+        async function loadListingForEdit(adId) {
+             console.log("Edit mode enabled for ad:", adId);
+             try {
+                 const docRef = db.collection("listings").doc(adId);
+                 const docSnap = await docRef.get();
+
+                 if (!docSnap.exists) {
+                     throw new Error("Ad not found.");
+                 }
+
+                 const ad = docSnap.data();
+                 editListingData = ad; // Save original data
+
+                 // Check ownership
+                 if (auth.currentUser.uid !== ad.userId) {
+                     throw new Error("You do not own this ad.");
+                 }
+
+                 // --- 1. Populate Text & Price Fields ---
+                 titleEnInput.value = ad.title_en || '';
+                 titleEsInput.value = ad.title_es || '';
+                 descriptionEnInput.value = ad.description_en || '';
+                 descriptionEsInput.value = ad.description_es || '';
+                 contactPhoneInput.value = ad.contactPhone || '';
+                 contactEmailInput.value = ad.contactEmail || '';
+                
+                 // Parse price
+                 if (ad.price) {
+                     const priceNum = ad.price.replace(/[^0-9.]/g, '');
+                     const currency = ad.price.includes('₡') ? 'crc' : 'usd';
+                     document.getElementById('price').value = priceNum;
+                     document.getElementById('currency').value = currency;
+                 }
+                
+                 // --- 2. Populate Checkboxes ---
+                 if (ad.contactPreferences) {
+                     prefPhone.checked = ad.contactPreferences.includes('phone');
+                     prefWhatsApp.checked = ad.contactPreferences.includes('whatsapp');
+                     prefEmail.checked = ad.contactPreferences.includes('email');
+                 }
+
+                 // --- 3. Populate Categories & Filters (Sequential) ---
+                 populateCategories();
+                 categorySelect.value = ad.category;
+                
+                 populateSubCategories(ad.category); // Wait for options to be created
+                 subCategorySelect.value = ad.subCategory;
+                
+                 renderDynamicFilters(ad.category, ad.subCategory, true); // Render filters but *don't* populate yet
+                 // (populateDynamicFilterValues will be called from renderDynamicFilters or populateCarQueryValues)
+                 
+                 // --- 4. Populate Locations (Sequential) ---
+                 populateProvinces();
+                 zoneSelect.value = ad.zone;
+                
+                 populateCantons(ad.zone); // Wait for options to be created
+                 cantonSelect.value = ad.canton;
+                
+                 populateDistricts(ad.zone, ad.canton); // Wait for options to be created
+                 districtSelect.value = ad.district;
+
+                 // --- 5. Populate Images ---
+                 existingImageUrls = ad.imageUrls || [];
+                 renderImagePreviews();
+
+             } catch (error) {
+                 console.error("Error loading ad for edit:", error);
+                 displayMessage('edit-load-error', 'error');
+                 submitButton.disabled = true; // Disable form if load fails
+             }
+        }
+        
+        /**
+        * NEW: Populates the dynamic filters (non-CarQuery)
+        */
+        function populateDynamicFilterValues(ad) {
+            if (!ad.category || !ad.subCategory || !categoryData[ad.category]?.subCategories[ad.subCategory]?.filters) return;
+            
+            categoryData[ad.category].subCategories[ad.subCategory].filters.forEach(filter => {
+                if (filter.type === 'select' || filter.type === 'text') {
+                    const filterEl = document.getElementById(`filter-${filter.id}`);
+                    if (filterEl && ad[filter.id]) {
+                        filterEl.value = ad[filter.id];
+                    }
+                }
+            });
+        }
+        
+        /**
+        * NEW: Populates the CarQuery filters (this is tricky!)
+        */
+        function populateCarQueryValues(ad) {
+            console.log("Populating CarQuery values...", ad);
+            
+            const yearSelect = document.getElementById('filter-year');
+            const makeSelect = document.getElementById('filter-make');
+            
+            if (!yearSelect || !makeSelect) {
+                console.warn("CarQuery dropdowns not ready yet for population.");
+                // This function is called from renderDynamicFilters via setTimeout,
+                // so it should be fine, but we'll add a fallback.
+                setTimeout(() => populateCarQueryValues(ad), 500);
+                return;
+            }
+            
+            // 1. Set Year
+            if (ad.year) {
+                yearSelect.value = ad.year;
+            }
+            
+            // 2. Trigger change on Year to load Makes
+            if (yearSelect.value) {
+                console.log("Triggering Year change to load Makes...");
+                $(yearSelect).change();
+            } else {
+                // If no year, just populate the other basic filters
+                 populateDynamicFilterValues(ad);
+            }
+
+            // 3. Wait for Makes to load, then set Make
+            setTimeout(() => {
+                if (makeSelect && ad.make) {
+                    console.log(`Attempting to set Make: ${ad.make}`);
+                    for (let opt of makeSelect.options) {
+                        if (opt.text === ad.make) {
+                            makeSelect.value = opt.value;
+                            console.log(`Found and set Make: ${opt.text}`);
+                            break;
+                        }
+                    }
+                    // 4. Trigger change on Make to load Models
+                    $(makeSelect).change();
+                } else {
+                     // If no make, just populate other filters
+                     populateDynamicFilterValues(ad);
+                }
+
+                // 5. Wait for Models to load, then set Model
+                setTimeout(() => {
+                    const modelSelect = document.getElementById('filter-model');
+                    if (modelSelect && ad.model) {
+                        console.log(`Attempting to set Model: ${ad.model}`);
+                        for (let opt of modelSelect.options) {
+                            if (opt.text === ad.model) {
+                                modelSelect.value = opt.value;
+                                console.log(`Found and set Model: ${opt.text}`);
+                                break;
+                            }
+                        }
+                        // 6. Trigger change on Model to load Trims
+                        $(modelSelect).change();
+                    } else {
+                        populateDynamicFilterValues(ad);
+                    }
+
+                    // 7. Wait for Trims to load, then set Trim
+                    setTimeout(() => {
+                        const trimSelect = document.getElementById('filter-trim');
+                        if (trimSelect && ad.trim) {
+                            console.log(`Attempting to set Trim: ${ad.trim}`);
+                            for (let opt of trimSelect.options) {
+                                if (opt.text === ad.trim) {
+                                    trimSelect.value = opt.value;
+                                    console.log(`Found and set Trim: ${opt.text}`);
+                                    break;
+                                }
+                            }
+                        }
+                        // 8. Finally, populate all other simple filters
+                        populateDynamicFilterValues(ad);
+                        
+                    }, 1000); // Wait for trims
+                }, 1000); // Wait for models
+            }, 1000); // Wait for makes
+        }
+
+
+        function handleRemoveExistingImage(e) {
+             const index = parseInt(e.target.dataset.index, 10);
+             if (isNaN(index)) return;
+            
+             existingImageUrls.splice(index, 1); // Remove from array
+             renderImagePreviews(); // Re-render
+            
+             // Allow one more new file to be added
+             const newAllowedCount = 5 - existingImageUrls.length;
+             displayMessage('max-5-images-total', 'info', { total: 5, existing: existingImageUrls.length, new: newAllowedCount });
+        }
+        
+        function handleRemoveNewImage(e) {
+             const index = parseInt(e.target.dataset.index, 10);
+             if (isNaN(index)) return;
+            
+             selectedFiles.splice(index, 1); // Remove from array
+             renderImagePreviews(); // Re-render
+        }
+
+
+        // --- 7. Initial Page Load ---
+        document.addEventListener('DOMContentLoaded', async () => {
+             console.log("DOM Content Loaded for post-ad.html");
+             
+             if (typeof costaRicaLocations === 'undefined') {
+                 console.error("CRITICAL: location-cr.js did not load or 'costaRicaLocations' is not defined.");
+                 displayMessage('location-data-missing', 'error');
+                 submitButton.disabled = true;
+             }
+
+             try {
+                 let headerLoaded = false;
+                 if (window.loadComponents) {
+                     headerLoaded = await window.loadComponents('./');
+                     console.log("Components loaded:", headerLoaded);
+                 } else { throw new Error("loadComponents not found"); }
+
+                 let attempts = 0;
+                 const maxAttempts = 20;
+                 while ((!window.firebaseAuthInstance || !window.firestoreDbInstance || !window.firebaseStorageInstance)
+                      && !window.firebaseInitializationError && attempts < maxAttempts)
+                 {
+                     console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                     await new Promise(resolve => setTimeout(resolve, 100));
+                     attempts++;
+                 }
+
+                 if (window.firebaseAuthInstance && window.firestoreDbInstance) {
+                     db = window.firestoreDbInstance;
+                     auth = window.firebaseAuthInstance;
+                     storage = window.firebaseStorageInstance;
+                     console.log("Firebase instances assigned for post-ad.");
+                     if (!storage) { console.warn("Firebase Storage instance is null. Image uploads disabled.")}
+
+                     
+                     if (auth) {
+                          auth.onAuthStateChanged(async (user) => { // Made async
+                             if (!user && !localStorage.getItem('nunciaya-user-session')) {
+                                 console.log("No user logged in (onAuthStateChanged), redirecting.");
+                                 window.location.href = 'my-account.html?redirect=post-ad.html';
+                             } else if (user) {
+                                 console.log("User confirmed logged in:", user.uid);
+                                
+                                 const urlParams = new URLSearchParams(window.location.search);
+                                 editAdId = urlParams.get('edit_id');
+                                 editMode = !!editAdId;
+                                 
+                                 postAdForm.addEventListener('submit', handlePostAd);
+                                 if (headerLoaded && window.runSessionLogic) window.runSessionLogic('./');
+                                
+                                 // Populate static dropdowns first
+                                 populateCategories();
+                                 if (typeof costaRicaLocations !== 'undefined') {
+                                     populateProvinces(); 
+                                 }
+                                 
+                                 if (editMode) {
+                                     // This is an edit, load the ad data
+                                     pageTitle.querySelector('.lang-en').textContent = 'Edit Your Ad';
+                                     pageTitle.querySelector('.lang-es').textContent = 'Editar Su Anuncio';
+                                     submitButton.querySelector('.lang-en').textContent = 'Update Ad';
+                                     submitButton.querySelector('.lang-es').textContent = 'Actualizar Anuncio';
+                                     await loadListingForEdit(editAdId);
+                                 } else {
+                                     // This is a new post, just set defaults
+                                     cantonSelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Provincia Primero' : 'Select Province First'} --</option>`;
+                                     districtSelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Cantón Primero' : 'Select Canton First'} --</option>`;
+                                 }
+
+                                 if (window.setLang) window.setLang(currentLang);
+                             } else {
+                                 console.log("Auth state changed, but no user found.");
+                             }
+                           });
+                     } else { throw new Error("Auth instance is null after wait loop"); }
+
+                 } else {
+                     if (window.firebaseInitializationError) { throw new Error(`Firebase init failed earlier: ${window.firebaseInitializationError}`); }
+                     else { throw new Error("Firebase instances not available after delay."); }
+                 }
+
+                 imageInput.addEventListener('change', handleFileSelect);
+                 categorySelect.addEventListener('change', (e) => { populateSubCategories(e.target.value); });
+                 subCategorySelect.addEventListener('change', (e) => { renderDynamicFilters(categorySelect.value, e.target.value); });
+                 zoneSelect.addEventListener('change', (e) => { populateCantons(e.target.value); });
+                 cantonSelect.addEventListener('change', (e) => { populateDistricts(zoneSelect.value, e.target.value); });
+                  // Add Drag and Drop listeners early
+                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { dropZone.addEventListener(eventName, preventDefaults, false); document.body.addEventListener(eventName, preventDefaults, false); });
+                 ['dragenter', 'dragover'].forEach(eventName => dropZone.addEventListener(eventName, highlightDropZone, false));
+                 ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, unhighlightDropZone, false));
+                 dropZone.addEventListener('drop', handleDrop, false);
+
+             } catch(error) {
+                  console.error("Initialization error on post-ad.html:", error);
+                  displayMessage('firebase-not-ready', 'error');
+                  submitButton.disabled = true;
+                   messageArea.textContent += (currentLang === 'es' ? ' No se puede publicar anuncios.' : ' Cannot post ads.');
+                  if(window.setLang) window.setLang(currentLang);
+             }
+        });
+
+    </script>
+
+</body>
+</html>

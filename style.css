@@ -1,0 +1,72 @@
+/* Simple styling */
+body {
+    font-family: "Inter", sans-serif, Arial;
+}
+
+/* Compiled from Tailwind: 
+  .category-link {
+    @apply text-blue-700 hover:underline;
+  }
+*/
+.category-link {
+    color: rgb(29 78 216);
+}
+.category-link:hover {
+    text-decoration-line: underline;
+}
+
+/* Compiled from Tailwind: 
+  .category-block {
+    @apply w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5 p-4;
+  }
+*/
+.category-block {
+    width: 100%;
+    padding: 1rem; /* 16px */
+}
+@media (min-width: 640px) {
+    .category-block {
+        width: 50%;
+    }
+}
+@media (min-width: 768px) {
+    .category-block {
+        width: 33.333333%;
+    }
+}
+@media (min-width: 1024px) {
+    .category-block {
+        width: 25%;
+    }
+}
+@media (min-width: 1280px) {
+    .category-block {
+        width: 20%;
+    }
+}
+
+/* Compiled from Tailwind:
+  .category-title {
+    @apply text-lg font-bold mb-2;
+  }
+*/
+.category-title {
+    font-size: 1.125rem; /* 18px */
+    line-height: 1.75rem; /* 28px */
+    font-weight: 700;
+    margin-bottom: 0.5rem; /* 8px */
+}
+
+/* Compiled from Tailwind:
+  .subcategory-list li {
+    @apply mb-1;
+  }
+*/
+.subcategory-list li {
+    margin-bottom: 0.25rem; /* 4px */
+}
+
+/* Hide Spanish by default */
+.lang-es {
+    display: none;
+}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - About Us</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet (two levels up) -->
+    <link rel="stylesheet" href="../../style.css">
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <style>
+        /* Add basic prose styling for readable text */
+        .prose-custom p {
+            margin-bottom: 1rem;
+            line-height: 1.65;
+        }
+        .prose-custom h3 {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600; /* font-semibold */
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-3xl py-8">
+        <div class="bg-white p-6 md:p-8 rounded-md shadow-sm border border-gray-200">
+            <h2 class="text-3xl font-bold mb-6">
+                <span class="lang-en">About NunciaYa</span>
+                <span class="lang-es">Acerca de NunciaYa</span>
+            </h2>
+
+            <div class="prose-custom text-gray-700">
+                <p>
+                    <span class="lang-en">Welcome to NunciaYa! We are Costa Rica's premier local classifieds platform, dedicated to connecting communities and creating opportunities. Our mission is to provide a simple, safe, and effective way for people to buy, sell, trade, and find what they need right in their local area.</span>
+                    <span class="lang-es">¡Bienvenido a NunciaYa! Somos la plataforma de clasificados locales premier de Costa Rica, dedicada a conectar comunidades y crear oportunidades. Nuestra misión es proveer una forma simple, segura y efectiva para que las personas compren, vendan, intercambien y encuentren lo que necesitan justo en su área local.</span>
+                </p>
+
+                <h3>
+                    <span class="lang-en">Our Story</span>
+                    <span class="lang-es">Nuestra Historia</span>
+                </h3>
+                <p>
+                    <span class="lang-en">Founded with a passion for community, NunciaYa was created to fill the need for a modern, reliable, and easy-to-use classifieds service tailored specifically for Costa Rica. We saw the potential to help individuals, families, and small businesses thrive by making local commerce more accessible.</span>
+                    <span class="lang-es">Fundada con una pasión por la comunidad, NunciaYa fue creada para llenar la necesidad de un servicio de clasificados moderno, confiable y fácil de usar, diseñado específicamente para Costa Rica. Vimos el potencial de ayudar a individuos, familias y pequeñas empresas a prosperar haciendo el comercio local más accesible.</span>
+                </p>
+
+                <h3>
+                    <span class="lang-en">What We Do</span>
+                    <span class="lang-es">Qué Hacemos</span>
+                </h3>
+                <p>
+                    <span class="lang-en">From finding a new apartment in San José to selling a car in Guanacaste, finding a job, or offering your professional services, NunciaYa is the place to be. We are more than just a marketplace; we are a community hub where neighbors help neighbors.</span>
+                    <span class="lang-es">Desde encontrar un nuevo apartamento en San José hasta vender un carro en Guanacaste, encontrar un trabajo u ofrecer sus servicios profesionales, NunciaYa es el lugar ideal. Somos más que un simple mercado; somos un centro comunitario donde los vecinos ayudan a los vecinos.</span>
+                </p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Main Application Script -->
+    <script src="../../app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // 1. Define page-specific text 
+        // (This page doesn't have any, but we keep the structure)
+        const pageSpecificText = {};
+        
+        // 2. Default language
+        let currentLang = 'es';
+
+        // 3. Re-assign the global setLang function
+        const globalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            if (lang) {
+                currentLang = lang;
+            }
+            // Call the global function from app.js
+            // It will handle the header, footer, and all .lang-en/.lang-es spans
+            if (globalSetLang) {
+                globalSetLang(currentLang, pageSpecificText);
+            }
+        };
+
+        // 4. Run the initialization
+        document.addEventListener('DOMContentLoaded', async () => {
+             console.log("DOM Content Loaded for about.html");
+             try {
+                // 1. Load components (path prefix is '../../' for nested page)
+                let headerLoaded = false;
+                if (window.loadComponents) {
+                     headerLoaded = await window.loadComponents('../../');
+                     console.log("Components loaded:", headerLoaded);
+                } else { throw new Error("loadComponents not found"); }
+
+                // 2. Wait for Firebase instances
+                let attempts = 0;
+                while ((!window.firebaseAuthInstance) && !window.firebaseInitializationError && attempts < 20) {
+                    console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                // 3. Run session logic
+                if (headerLoaded && window.runSessionLogic) {
+                    window.runSessionLogic('../../');
+                } else { console.error("Header/Session logic failed."); }
+                
+                // 4. Set initial language
+                if(window.setLang) {
+                    window.setLang(currentLang);
+                    console.log("Initial language set.");
+                } else { console.error("setLang not found"); }
+                
+             } catch(error) {
+                 console.error("Initialization error on about.html:", error);
+                 if(window.setLang) window.setLang(currentLang);
+             }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - My Account</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to the external stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+
+    <!-- Header Placeholder -->
+    <div id="header-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 max-w-lg py-8">
+        
+        <!-- Login / My Account View -->
+        <div id="account-view" style="display: none;">
+            <h2 class="text-3xl font-bold mb-6">
+                <span class="lang-en">My Account</span>
+                <span class="lang-es">Mi Cuenta</span>
+            </h2>
+            <div class="bg-white p-6 rounded-md shadow-sm border border-gray-200">
+                <p class="mb-4">
+                    <span class="lang-en">Welcome back,</span>
+                    <span class="lang-es">Bienvenido/a,</span>
+                    <strong id="user-email-display"></strong>.
+                </p>
+                <!-- NEW: Manage Listings Button -->
+                <a href="profile.html" id="manage-listings-btn" class="mb-4 w-full text-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 block">
+                    <span class="lang-en">Manage My Ads</span>
+                    <span class="lang-es">Gestionar Mis Anuncios</span>
+                </a>
+                <!-- NEW: Manage Favorites Button -->
+                <a href="profile.html" id="manage-favorites-btn" class="mb-4 w-full text-center px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 block">
+                    <span class="lang-en">My Favorites</span>
+                    <span class="lang-es">Mis Favoritos</span>
+                </a>
+                <button id="logout-button" class="w-full text-left text-sm text-red-600 hover:underline">
+                    <span class="lang-en">Log Out</span>
+                    <span class="lang-es">Cerrar Sesión</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Login / Sign Up View -->
+        <div id="login-view">
+            <h2 class="text-3xl font-bold mb-6">
+                <span class="lang-en">Login or Sign Up</span>
+                <span class="lang-es">Ingresar o Registrarse</span>
+            </h2>
+            <div class="bg-white p-6 rounded-md shadow-sm border border-gray-200">
+                
+                <!-- Tab Buttons -->
+                <div class="flex border-b border-gray-200 mb-4">
+                    <button id="login-tab-btn" class="flex-1 py-2 px-4 text-center font-medium text-blue-600 border-b-2 border-blue-600">
+                        <span class="lang-en">Login</span>
+                        <span class="lang-es">Ingresar</span>
+                    </button>
+                    <button id="signup-tab-btn" class="flex-1 py-2 px-4 text-center font-medium text-gray-500 hover:text-gray-700">
+                        <span class="lang-en">Sign Up</span>
+                        <span class="lang-es">Registrarse</span>
+                    </button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-700">
+                            <span class="lang-en">Email</span>
+                            <span class="lang-es">Correo Electrónico</span>
+                        </label>
+                        <input type="email" id="login-email" name="login-email" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700">
+                            <span class="lang-en">Password</span>
+                            <span class="lang-es">Contraseña</span>
+                        </label>
+                        <input type="password" id="login-password" name="login-password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Login Message Area -->
+                    <div id="login-message-area" class="text-center text-sm"></div>
+
+                    <div>
+                        <button type="submit" id="login-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+                            <span class="lang-en">Login</span>
+                            <span class="lang-es">Ingresar</span>
+                        </button>
+                    </div>
+                    <div class="text-sm text-center">
+                        <a href="#" id="forgot-password-btn" class="text-blue-600 hover:underline">
+                            <span class="lang-en">Forgot your password?</span>
+                            <span class="lang-es">¿Olvidó su contraseña?</span>
+                        </a>
+                    </div>
+                </form>
+
+                <!-- Sign Up Form -->
+                <form id="signup-form" class="space-y-4" style="display: none;">
+                    
+                    <!-- NEW: Display Name -->
+                    <div>
+                        <label for="signup-name" class="block text-sm font-medium text-gray-700 required-label">
+                            <span class="lang-en">Display Name</span>
+                            <span class="lang-es">Nombre Para Mostrar</span>
+                        </label>
+                        <input type="text" id="signup-name" name="signup-name" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                         <p class="mt-1 text-xs text-gray-500">
+                            <span class="lang-en">This name will be public on your ads.</span>
+                            <span class="lang-es">Este nombre será público en sus anuncios.</span>
+                        </p>
+                    </div>
+
+                    <!-- NEW: Full Name -->
+                    <div>
+                        <label for="signup-full-name" class="block text-sm font-medium text-gray-700 required-label">
+                            <span class="lang-en">Full Name</span>
+                            <span class="lang-es">Nombre Completo</span>
+                        </label>
+                        <input type="text" id="signup-full-name" name="signup-full-name" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                         <p class="mt-1 text-xs text-gray-500">
+                            <span class="lang-en">Your full name will be kept private.</span>
+                            <span class="lang-es">Su nombre completo se mantendrá privado.</span>
+                        </p>
+                    </div>
+
+                    <!-- NEW: Phone Number -->
+                    <div>
+                        <label for="signup-phone" class="block text-sm font-medium text-gray-700 required-label">
+                            <span class="lang-en">Phone Number</span>
+                            <span class="lang-es">Número de Teléfono</span>
+                        </label>
+                        <input type="tel" id="signup-phone" name="signup-phone" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="signup-email" class="block text-sm font-medium text-gray-700 required-label">
+                            <span class="lang-en">Email</span>
+                            <span class="lang-es">Correo Electrónico</span>
+                        </label>
+                        <input type="email" id="signup-email" name="signup-email" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="signup-password" class="block text-sm font-medium text-gray-700 required-label">
+                            <span class="lang-en">Password</span>
+                            <span class="lang-es">Contraseña</span>
+                        </label>
+                        <input type="password" id="signup-password" name="signup-password" required minlength="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">
+                            <span class="lang-en">Must be at least 6 characters.</span>
+                            <span class="lang-es">Debe tener al menos 6 caracteres.</span>
+                        </p>
+                    </div>
+                    <div>
+                        <label for="signup-password-confirm" class="block text-sm font-medium text-gray-700 required-label">
+                            <span class="lang-en">Confirm Password</span>
+                            <span class="lang-es">Confirmar Contraseña</span>
+                        </label>
+                        <input type="password" id="signup-password-confirm" name="signup-password-confirm" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    
+                    <!-- Signup Message Area -->
+                    <div id="signup-message-area" class="text-center text-sm"></div>
+                    
+                    <div>
+                        <button type="submit" id="signup-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
+                            <span class="lang-en">Create Account</span>
+                            <span class="lang-es">Crear Cuenta</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Main Application Script -->
+    <script src="app.js"></script>
+
+    <!-- Page-Specific Script -->
+    <script>
+        // --- 1. Page Elements & State ---
+        const accountView = document.getElementById('account-view');
+        const loginView = document.getElementById('login-view');
+        const loginTabBtn = document.getElementById('login-tab-btn');
+        const signupTabBtn = document.getElementById('signup-tab-btn');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const logoutButton = document.getElementById('logout-button');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const loginMessageArea = document.getElementById('login-message-area');
+        const signupMessageArea = document.getElementById('signup-message-area');
+        const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+        const loginButton = document.getElementById('login-button');
+        const signupButton = document.getElementById('signup-button');
+        
+        // --- NEW: Signup name field ---
+        const signupNameInput = document.getElementById('signup-name');
+        // --- NEW: Add Full Name and Phone ---
+        const signupFullNameInput = document.getElementById('signup-full-name');
+        const signupPhoneInput = document.getElementById('signup-phone');
+        
+        const signupPasswordInput = document.getElementById('signup-password');
+        const signupPasswordConfirmInput = document.getElementById('signup-password-confirm');
+        
+        let currentLang = 'es';
+        let db;
+        let auth;
+        
+        // Store the redirect URL
+        let redirectUrl = 'my-account.html'; // Default redirect
+
+        // --- 2. Language & Initialization ---
+        const pageSpecificText = {}; // No page-specific placeholders needed for this page
+
+        const originalSetLang = window.setLang;
+        window.setLang = (lang) => {
+            currentLang = lang;
+            if (originalSetLang) {
+                originalSetLang(lang, pageSpecificText);
+            }
+            // Manually update tab styles if needed
+            if (loginForm.style.display !== 'none') {
+                loginTabBtn.classList.add('text-blue-600', 'border-blue-600');
+                loginTabBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
+                signupTabBtn.classList.add('text-gray-500', 'hover:text-gray-700');
+                signupTabBtn.classList.remove('text-blue-600', 'border-blue-600');
+            } else {
+                signupTabBtn.classList.add('text-blue-600', 'border-blue-600');
+                signupTabBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
+                loginTabBtn.classList.add('text-gray-500', 'hover:text-gray-700');
+                loginTabBtn.classList.remove('text-blue-600', 'border-blue-600');
+            }
+            
+            // Clear messages on lang switch
+            displayMessage(loginMessageArea, '', 'info');
+            displayMessage(signupMessageArea, '', 'info');
+        };
+
+        // --- 3. UI/Form Logic ---
+
+        function showView(view) {
+            if (view === 'account') {
+                accountView.style.display = 'block';
+                loginView.style.display = 'none';
+            } else {
+                accountView.style.display = 'none';
+                loginView.style.display = 'block';
+            }
+        }
+
+        loginTabBtn.addEventListener('click', () => {
+            loginForm.style.display = 'block';
+            signupForm.style.display = 'none';
+            window.setLang(currentLang); // Update tab styles
+        });
+
+        signupTabBtn.addEventListener('click', () => {
+            loginForm.style.display = 'none';
+            signupForm.style.display = 'block';
+            window.setLang(currentLang); // Update tab styles
+        });
+        
+        function displayMessage(area, code, type = 'error') {
+            const messages = {
+                en: {
+                    'auth/invalid-email': 'Please enter a valid email address.',
+                    'auth/user-not-found': 'No account found with this email.',
+                    'auth/wrong-password': 'Incorrect password. Please try again.',
+                    'auth/email-already-in-use': 'This email is already in use by another account.',
+                    'auth/weak-password': 'Password is too weak. Must be at least 6 characters.',
+                    'password-mismatch': 'Passwords do not match.',
+                    'name-required': 'Please enter your display name.', // NEW
+                    'fullname-required': 'Please enter your full name.', // NEW
+                    'phone-required': 'Please enter your phone number.', // NEW
+                    'signup-success': 'Account created successfully! Please log in.',
+                    'login-success': 'Login successful! Redirecting...',
+                    'reset-email-sent': 'Password reset email sent! Check your inbox.',
+                    'auth/too-many-requests': 'Too many attempts. Please try again later.',
+                    'unknown-error': 'An unknown error occurred. Please try again.'
+                },
+                es: {
+                    'auth/invalid-email': 'Por favor ingrese un correo válido.',
+                    'auth/user-not-found': 'No se encontró cuenta con este correo.',
+                    'auth/wrong-password': 'Contraseña incorrecta. Intente de nuevo.',
+                    'auth/email-already-in-use': 'Este correo ya está en uso por otra cuenta.',
+                    'auth/weak-password': 'La contraseña es muy débil. Debe tener al menos 6 caracteres.',
+                    'password-mismatch': 'Las contraseñas no coinciden.',
+                    'name-required': 'Por favor ingrese su nombre para mostrar.', // NEW
+                    'fullname-required': 'Por favor ingrese su nombre completo.', // NEW
+                    'phone-required': 'Por favor ingrese su número de teléfono.', // NEW
+                    'signup-success': '¡Cuenta creada con éxito! Por favor inicie sesión.',
+                    'login-success': '¡Ingreso exitoso! Redirigiendo...',
+                    'reset-email-sent': '¡Correo de reenvío de contraseña enviado! Revise su bandeja de entrada.',
+                    'auth/too-many-requests': 'Demasiados intentos. Por favor intente más tarde.',
+                    'unknown-error': 'Ocurrió un error inesperado. Por favor intente de nuevo.'
+                }
+            };
+
+            const messageText = (code === '') ? '' : (messages[currentLang][code] || messages[currentLang]['unknown-error']);
+            area.className = `text-center text-sm ${type === 'error' ? 'text-red-600' : 'text-green-600'}`;
+            area.textContent = messageText;
+        }
+
+        // --- 4. Firebase Auth Logic ---
+
+        /**
+         * NEW: Updated to include Display Name
+         */
+        async function handleSignUp(e) {
+            e.preventDefault();
+            signupButton.disabled = true;
+            displayMessage(signupMessageArea, '', 'info');
+
+            const displayName = signupNameInput.value.trim(); // NEW
+            const fullName = signupFullNameInput.value.trim(); // NEW
+            const phone = signupPhoneInput.value.trim(); // NEW
+            const email = signupForm['signup-email'].value;
+            const password = signupPasswordInput.value;
+            const passwordConfirm = signupPasswordConfirmInput.value;
+            
+            // --- NEW: Validate Display Name ---
+            if (!displayName) {
+                displayMessage(signupMessageArea, 'name-required', 'error');
+                signupButton.disabled = false;
+                signupNameInput.focus();
+                return;
+            }
+
+            // --- NEW: Validate Full Name ---
+            if (!fullName) {
+                displayMessage(signupMessageArea, 'fullname-required', 'error');
+                signupButton.disabled = false;
+                signupFullNameInput.focus();
+                return;
+            }
+
+            // --- NEW: Validate Phone ---
+            if (!phone) {
+                displayMessage(signupMessageArea, 'phone-required', 'error');
+                signupButton.disabled = false;
+                signupPhoneInput.focus();
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                displayMessage(signupMessageArea, 'password-mismatch', 'error');
+                signupButton.disabled = false;
+                signupPasswordInput.focus();
+                return;
+            }
+
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                
+                // --- NEW: Update profile with Display Name ---
+                await userCredential.user.updateProfile({
+                    displayName: displayName
+                });
+                console.log("User created and profile updated with displayName:", displayName);
+                // --- End NEW ---
+
+                // Optional: Create a user doc in Firestore (if needed for other data)
+                 await db.collection("users").doc(userCredential.user.uid).set({
+                     email: userCredential.user.email,
+                     createdAt: firebase.firestore.Timestamp.now(),
+                     displayName: displayName, // Save it in Firestore too
+                     fullName: fullName, // NEW
+                     phone: phone // NEW
+                 });
+
+                displayMessage(signupMessageArea, 'signup-success', 'success');
+                signupForm.reset();
+                // Switch to login tab
+                setTimeout(() => {
+                    loginTabBtn.click();
+                    loginForm['login-email'].value = email; // Pre-fill email
+                    loginForm['login-password'].focus();
+                }, 1500);
+
+            } catch (error) {
+                console.error("Sign up error:", error);
+                displayMessage(signupMessageArea, error.code || 'unknown-error', 'error');
+            }
+            signupButton.disabled = false;
+        }
+
+
+        async function handleSignIn(e) {
+            e.preventDefault();
+            loginButton.disabled = true;
+            displayMessage(loginMessageArea, '', 'info');
+
+            const email = loginForm['login-email'].value;
+            const password = loginForm['login-password'].value;
+
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                console.log("User signed in:", user.uid);
+                
+                // --- UPDATED: Save session data ---
+                const sessionData = {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName || '' // Include displayName
+                };
+                localStorage.setItem('nunciaya-user-session', JSON.stringify(sessionData));
+                // ---
+
+                displayMessage(loginMessageArea, 'login-success', 'success');
+                
+                // Redirect after a short delay
+                setTimeout(() => {
+                    window.location.href = redirectUrl || 'my-account.html';
+                }, 1000);
+
+            } catch (error) {
+                console.error("Sign in error:", error);
+                displayMessage(loginMessageArea, error.code || 'unknown-error', 'error');
+                loginButton.disabled = false;
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await auth.signOut();
+                localStorage.removeItem('nunciaya-user-session'); // Clear session
+                console.log("User logged out");
+                showView('login');
+                // We don't redirect, just stay on the login page
+            } catch (error) {
+                console.error("Logout error:", error);
+            }
+        }
+        
+        async function handleForgotPassword() {
+            const email = loginForm['login-email'].value;
+            if (!email) {
+                displayMessage(loginMessageArea, 'auth/invalid-email', 'error');
+                loginForm['login-email'].focus();
+                return;
+            }
+            
+            try {
+                await auth.sendPasswordResetEmail(email);
+                displayMessage(loginMessageArea, 'reset-email-sent', 'success');
+            } catch (error) {
+                console.error("Forgot password error:", error);
+                displayMessage(loginMessageArea, error.code || 'unknown-error', 'error');
+            }
+        }
+
+
+        // --- 5. Page Load Logic ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log("DOM Content Loaded for my-account.html");
+            
+            // Get redirect URL from query params
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirect = urlParams.get('redirect');
+            if (redirect) {
+                // Basic validation to prevent open redirect
+                if (redirect.startsWith('pages/') || redirect.startsWith('post-ad.html') || redirect.startsWith('my-account.html')) {
+                    redirectUrl = redirect;
+                    console.log("Redirect URL set to:", redirectUrl);
+                }
+            }
+
+
+            try {
+                // 1. Load header/footer and WAIT
+                let headerLoaded = false;
+                if (window.loadComponents) {
+                    headerLoaded = await window.loadComponents('./'); // Path prefix is './'
+                    console.log("Components loaded:", headerLoaded);
+                } else { throw new Error("loadComponents not found"); }
+
+                // 2. Wait for Firebase instances from app.js
+                let attempts = 0;
+                const maxAttempts = 20;
+                while ((!window.firebaseAuthInstance || !window.firestoreDbInstance) && !window.firebaseInitializationError && attempts < maxAttempts) {
+                    console.log(`Waiting for Firebase instances... Attempt ${attempts + 1}`);
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                // Assign instances or throw error
+                if (window.firebaseAuthInstance && window.firestoreDbInstance) {
+                    db = window.firestoreDbInstance;
+                    auth = window.firebaseAuthInstance;
+                    console.log("Firebase instances assigned for my-account.");
+
+                    // 3. Add form/button listeners
+                    loginForm.addEventListener('submit', handleSignIn);
+                    signupForm.addEventListener('submit', handleSignUp);
+                    logoutButton.addEventListener('click', handleLogout);
+                    forgotPasswordBtn.addEventListener('click', handleForgotPassword);
+
+                    // 4. Run session logic (from app.js) AFTER assigning auth
+                    if (headerLoaded && window.runSessionLogic) {
+                        window.runSessionLogic('./'); // Path prefix is './'
+                    } else { console.error("Header/Session logic failed."); }
+                    
+                    // 5. Check auth state
+                    auth.onAuthStateChanged((user) => {
+                        if (user && !user.isAnonymous) {
+                            console.log("User is logged in, showing account view.");
+                            userEmailDisplay.textContent = user.email;
+                            
+                            // Save session data (in case it's missing, e.g., from signup redirect)
+                            const sessionData = {
+                                uid: user.uid,
+                                email: user.email,
+                                displayName: user.displayName || '' // Include displayName
+                            };
+                            localStorage.setItem('nunciaya-user-session', JSON.stringify(sessionData));
+                            
+                            showView('account');
+                            
+                            // If user was redirected to login, send them back
+                            if (redirectUrl && redirectUrl !== 'my-account.html') {
+                                // Add a small delay to show the "welcome" message
+                                setTimeout(() => {
+                                    window.location.href = redirectUrl;
+                                }, 1000);
+                            }
+                            
+                        } else {
+                            console.log("User is not logged in, showing login/signup view.");
+                            localStorage.removeItem('nunciaya-user-session'); // Ensure session is clear
+                            showView('login');
+                        }
+                         // 6. Set initial language (AFTER view is determined)
+                         if (window.setLang) {
+                            window.setLang(currentLang);
+                            console.log("Initial language set.");
+                        } else { console.error("setLang not found"); }
+                    });
+
+                } else {
+                    if (window.firebaseInitializationError) { throw new Error(`Firebase init failed earlier: ${window.firebaseInitializationError}`); }
+                    else { throw new Error("Firebase instances not available after delay."); }
+                }
+
+            } catch (error) {
+                console.error("Initialization error on my-account.html:", error);
+                // Show login view as a fallback
+                showView('login');
+                displayMessage(loginMessageArea, 'firebase-not-ready', 'error');
+                if (window.setLang) window.setLang(currentLang);
+            }
+        });
+    </script>
+
+</body>
+</html>
