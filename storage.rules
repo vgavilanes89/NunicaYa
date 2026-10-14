@@ -1,0 +1,25 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Listing images: anyone can view (including older images stored without a user folder)
+    match /listing-images/{allPaths=**} {
+      allow read: if true;
+    }
+
+    // Users may only upload/delete inside their own folder
+    // (post-ad.html uploads to listing-images/{userId}/{timestamp}-{index}-{rand}.{ext})
+    match /listing-images/{userId}/{fileName} {
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // User uploads (e.g. profile/avatar): only the owner can read/write
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

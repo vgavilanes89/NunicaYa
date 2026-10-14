@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NunciaYa - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+    <style>
+        .stat-card { transition: transform 0.15s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .admin-tab { border-bottom-width: 2px; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+    <div id="header-placeholder"></div>
+
+    <main class="container mx-auto px-4 max-w-7xl py-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <span class="lang-en">Admin Dashboard</span>
+                    <span class="lang-es">Panel de Administración</span>
+                </h1>
+                <p class="text-gray-600 text-sm mt-1">
+                    <span class="lang-en">Site overview, users, listings, payments &amp; support.</span>
+                    <span class="lang-es">Resumen del sitio, usuarios, anuncios, pagos y soporte.</span>
+                    <span class="text-gray-400 ml-2" id="stat-last-updated"></span>
+                </p>
+            </div>
+            <button type="button" id="refresh-dashboard"
+                class="self-start px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700">
+                <span class="lang-en">Refresh</span>
+                <span class="lang-es">Actualizar</span>
+            </button>
+        </div>
+
+        <div id="admin-loading" class="text-center py-12 text-gray-500">
+            <span class="lang-en">Checking access…</span>
+            <span class="lang-es">Verificando acceso…</span>
+        </div>
+
+        <div id="admin-denied" class="hidden bg-red-50 border border-red-200 rounded-lg p-6 text-red-800 text-center max-w-md mx-auto">
+            <p class="font-semibold">
+                <span class="lang-en">Access denied.</span>
+                <span class="lang-es">Acceso denegado.</span>
+            </p>
+            <p class="mt-2 text-sm">
+                <span class="lang-en">Sign in with an admin account. Add your UID to Firestore <code class="bg-red-100 px-1 rounded">admins/{your-uid}</code>.</span>
+                <span class="lang-es">Inicie sesión como administrador. Añada su UID a Firestore <code class="bg-red-100 px-1 rounded">admins/{su-uid}</code>.</span>
+            </p>
+            <a href="my-account.html" class="inline-block mt-4 text-blue-600 hover:underline">
+                <span class="lang-en">My account</span>
+                <span class="lang-es">Mi cuenta</span>
+            </a>
+        </div>
+
+        <div id="admin-dashboard" class="hidden">
+            <!-- Tabs -->
+            <nav class="flex flex-wrap gap-1 border-b border-gray-200 mb-6">
+                <button type="button" data-admin-tab="overview" class="admin-tab px-4 py-2 text-sm font-medium border-blue-600 text-blue-700">Overview</button>
+                <button type="button" data-admin-tab="users" class="admin-tab px-4 py-2 text-sm font-medium border-transparent text-gray-600 hover:text-gray-900">Users</button>
+                <button type="button" data-admin-tab="listings" class="admin-tab px-4 py-2 text-sm font-medium border-transparent text-gray-600 hover:text-gray-900">Listings</button>
+                <button type="button" data-admin-tab="payments" class="admin-tab px-4 py-2 text-sm font-medium border-transparent text-gray-600 hover:text-gray-900">Payments</button>
+                <button type="button" data-admin-tab="promos" class="admin-tab px-4 py-2 text-sm font-medium border-transparent text-gray-600 hover:text-gray-900">Promo codes</button>
+                <button type="button" data-admin-tab="support" class="admin-tab px-4 py-2 text-sm font-medium border-transparent text-gray-600 hover:text-gray-900">Support</button>
+                <button type="button" data-admin-tab="online" class="admin-tab px-4 py-2 text-sm font-medium border-transparent text-gray-600 hover:text-gray-900">Online</button>
+            </nav>
+
+            <!-- Overview -->
+            <div data-admin-panel="overview" class="space-y-6">
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div class="stat-card bg-white rounded-lg shadow border p-4">
+                        <p class="text-xs text-gray-500 uppercase">Listings</p>
+                        <p id="stat-total-listings" class="text-2xl font-bold text-blue-600">—</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-lg shadow border p-4">
+                        <p class="text-xs text-gray-500 uppercase">Users</p>
+                        <p id="stat-total-users" class="text-2xl font-bold text-green-600">—</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-lg shadow border p-4">
+                        <p class="text-xs text-gray-500 uppercase">Online (15m)</p>
+                        <p id="stat-online-users" class="text-2xl font-bold text-indigo-600">—</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-lg shadow border p-4">
+                        <p class="text-xs text-gray-500 uppercase">Revenue</p>
+                        <p id="stat-revenue" class="text-2xl font-bold text-emerald-600">—</p>
+                        <p class="text-xs text-gray-400"><span id="stat-paid-count">0</span> paid</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-lg shadow border p-4">
+                        <p class="text-xs text-gray-500 uppercase">New ads (7d)</p>
+                        <p id="stat-new-7" class="text-2xl font-bold text-amber-600">—</p>
+                    </div>
+                    <div class="stat-card bg-white rounded-lg shadow border p-4">
+                        <p class="text-xs text-gray-500 uppercase">Open support</p>
+                        <p id="stat-open-help" class="text-2xl font-bold text-orange-600">—</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-lg shadow border p-5">
+                        <h2 class="font-semibold mb-3">By status</h2>
+                        <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                            <div class="border rounded p-2"><p class="text-gray-500">Active</p><p id="stat-status-active" class="text-lg font-bold text-green-600">—</p></div>
+                            <div class="border rounded p-2"><p class="text-gray-500">Pending</p><p id="stat-status-pending" class="text-lg font-bold text-yellow-600">—</p></div>
+                            <div class="border rounded p-2"><p class="text-gray-500">Sold</p><p id="stat-status-sold" class="text-lg font-bold text-gray-600">—</p></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-3">New users (30d): <span id="stat-new-users-30">—</span> · New ads (30d): <span id="stat-new-30">—</span></p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow border p-5">
+                        <h2 class="font-semibold mb-3">By category</h2>
+                        <ul id="stat-by-category" class="space-y-1 text-sm"></ul>
+                    </div>
+                    <div class="bg-white rounded-lg shadow border p-5">
+                        <h2 class="font-semibold mb-3">Payments by product</h2>
+                        <ul id="stat-payments-by-product" class="space-y-1 text-sm"></ul>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                        <h2 class="font-semibold mb-3">Recent payments</h2>
+                        <div id="overview-payments-list"></div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                        <h2 class="font-semibold mb-3">Currently online</h2>
+                        <div id="overview-online-list"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                    <h2 class="font-semibold mb-3">Recent listings (30 days)</h2>
+                    <div id="stat-recent-list"></div>
+                </div>
+            </div>
+
+            <!-- Users -->
+            <div data-admin-panel="users" class="hidden space-y-4">
+                <div class="flex flex-wrap gap-3 items-center">
+                    <input type="search" id="users-search" placeholder="Search email, name, phone, UID…"
+                        class="flex-grow max-w-md border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <button type="button" id="delete-selected-users"
+                        class="px-3 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled>Delete selected (0)</button>
+                    <button type="button" id="refresh-users" class="px-3 py-2 border rounded-md text-sm hover:bg-gray-50">Refresh</button>
+                </div>
+                <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                    <div id="users-table"></div>
+                </div>
+                <button type="button" id="load-more-users" class="hidden text-sm text-blue-600 hover:underline">Load more users</button>
+            </div>
+
+            <!-- Listings -->
+            <div data-admin-panel="listings" class="hidden">
+                <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                    <p class="text-sm text-gray-500 mb-3">Change status inline, or use <strong>Delete</strong> to remove a post immediately (photos and search index included). Sold ads otherwise follow the 48h visibility rule.</p>
+                    <div id="listings-table"></div>
+                </div>
+            </div>
+
+            <!-- Payments -->
+            <div data-admin-panel="payments" class="hidden">
+                <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                    <div id="payments-table"></div>
+                </div>
+            </div>
+
+            <!-- Promo codes -->
+            <div data-admin-panel="promos" class="hidden space-y-4">
+                <div class="flex flex-wrap gap-3 items-center">
+                    <button type="button" id="seed-promo-codes" class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
+                        Seed default codes
+                    </button>
+                    <button type="button" id="refresh-promos" class="px-3 py-2 border rounded-md text-sm hover:bg-gray-50">Refresh</button>
+                    <p class="text-sm text-gray-500">Default: NUNCIAFREE, NUNCIAFREEALL (unlimited 100%), HOUSING50, HOUSING25, PHOTOS50</p>
+                </div>
+                <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                    <div id="promos-table"></div>
+                </div>
+            </div>
+
+            <!-- Support -->
+            <div data-admin-panel="support" class="hidden">
+                <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                    <div id="help-table"></div>
+                </div>
+            </div>
+
+            <!-- Online -->
+            <div data-admin-panel="online" class="hidden">
+                <p class="text-sm text-gray-500 mb-3">Users with activity in the last 15 minutes (based on site presence tracking).</p>
+                <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
+                    <div id="online-table"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit user modal -->
+    <div id="user-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" role="dialog">
+            <h3 class="text-lg font-semibold mb-4">Edit user</h3>
+            <input type="hidden" id="edit-user-id">
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Email (read-only)</label>
+                    <input type="email" id="edit-user-email" readonly class="w-full border rounded-md px-3 py-2 bg-gray-100 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Display name</label>
+                    <input type="text" id="edit-display-name" class="w-full border rounded-md px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Full name</label>
+                    <input type="text" id="edit-full-name" class="w-full border rounded-md px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Phone</label>
+                    <input type="tel" id="edit-phone" class="w-full border rounded-md px-3 py-2 text-sm">
+                </div>
+            </div>
+            <div class="mt-5 border-t border-gray-200 pt-4">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <h4 class="text-sm font-semibold text-gray-800">Discount code usage</h4>
+                    <button type="button" id="clear-all-user-promos-btn"
+                        class="text-xs px-2 py-1 border border-amber-300 text-amber-800 rounded hover:bg-amber-50 hidden">
+                        Clear all redemptions
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mb-2">Remove usage records so this user can reuse promo codes.</p>
+                <div id="user-promo-redemptions" class="text-sm text-gray-500">Loading…</div>
+            </div>
+            <div class="mt-6 flex flex-col sm:flex-row sm:justify-between gap-3">
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" id="modal-toggle-user-btn" class="px-3 py-2 border border-amber-300 text-amber-700 rounded-md text-sm hover:bg-amber-50">Deactivate account</button>
+                    <button type="button" id="modal-delete-user-btn" class="px-3 py-2 border border-red-300 text-red-700 rounded-md text-sm hover:bg-red-50">Delete account</button>
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <button type="button" id="close-user-modal" class="px-4 py-2 border rounded-md text-sm">Cancel</button>
+                    <button type="button" id="save-user-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete user confirmation -->
+    <div id="delete-user-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-[60] p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6" role="alertdialog">
+            <h3 class="text-lg font-semibold text-red-700 mb-2">Delete user permanently?</h3>
+            <p id="delete-user-message" class="text-sm text-gray-600 mb-6"></p>
+            <div class="flex justify-end gap-3">
+                <button type="button" id="close-delete-user-modal" class="px-4 py-2 border rounded-md text-sm">Cancel</button>
+                <button type="button" id="confirm-delete-user-btn" class="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700">Delete permanently</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-toast" class="hidden fixed bottom-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-md shadow-lg z-50"></div>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function () {
+            if (window.loadComponents) await window.loadComponents('./');
+            if (window.runSessionLogic) window.runSessionLogic('./');
+            if (window.setLang) window.setLang(window.getPreferredLang ? window.getPreferredLang() : 'es');
+        });
+    </script>
+    <script src="js/admin-dashboard.js"></script>
+</body>
+</html>

@@ -145,16 +145,6 @@
                         </h1>
                         <div class="flex-shrink-0 md:ml-6 text-right">
                             <span id="listing-price" class="text-3xl font-bold text-blue-700 block"></span>
-                            <!-- Currency Toggle -->
-                            <div class="text-sm mt-1">
-                                <button id="currency-usd-btn"
-                                    class="font-bold text-blue-700 opacity-50 hover:opacity-100"
-                                    onclick="setCurrency('usd')">USD</button>
-                                <span class="mx-1 text-gray-400">/</span>
-                                <button id="currency-crc-btn"
-                                    class="font-bold text-blue-700 opacity-50 hover:opacity-100"
-                                    onclick="setCurrency('crc')">CRC</button>
-                            </div>
                         </div>
                     </div>
 
@@ -391,8 +381,6 @@
 
         const breadcrumbCategory = document.getElementById('breadcrumb-category');
         const breadcrumbSubCategory = document.getElementById('breadcrumb-subcategory');
-        const currencyUsdBtn = document.getElementById('currency-usd-btn');
-        const currencyCrcBtn = document.getElementById('currency-crc-btn');
 
         // --- NEW: Gallery Elements ---
         const prevImageBtn = document.getElementById('prev-image-btn');
@@ -413,64 +401,88 @@
         // --- NEW: Sold Banner Element ---
         const soldBanner = document.getElementById('sold-banner');
 
-        let currentLang = 'es';
+        let currentLang = window.getPreferredLang ? window.getPreferredLang() : 'es';
         let db;
         let auth;
-
-        // --- Currency Conversion ---
-        const USD_TO_CRC_RATE = 500; // Mock rate
-        let basePriceUSD = 0; // Store the price in USD
-        let currentCurrency = 'crc'; // Default currency
 
         // --- (NEW) Category Data (for breadcrumbs) ---
         const categoryData = {
             housing: {
                 en: "Housing", es: "Vivienda", subCategories: {
                     apartments: { en: "Apartments / Housing", es: "Apartamentos / Casas" },
+                    cabins: { en: "Cabins / Cabinas", es: "Cabinas" },
+                    landFarms: { en: "Land & Farms", es: "Fincas y Terrenos" },
                     rentalsWanted: { en: "Rentals Wanted", es: "Busco Alquiler" },
+                    rentalswanted: { en: "Rentals Wanted", es: "Busco Alquiler" },
                     roomsShared: { en: "Rooms / Shared", es: "Cuartos / Compartido" },
+                    roomsshared: { en: "Rooms / Shared", es: "Cuartos / Compartido" },
                     sublets: { en: "Sublets / Temporary", es: "Subarriendo / Temporal" },
                     realEstate: { en: "Real Estate for Sale", es: "Bienes Raíces Venta" },
+                    realestate: { en: "Real Estate for Sale", es: "Bienes Raíces Venta" },
                     vacationRentals: { en: "Vacation Rentals", es: "Alquileres Vacaciones" },
+                    vacationrentals: { en: "Vacation Rentals", es: "Alquileres Vacaciones" },
                 }
             },
             forSale: {
                 en: "For Sale", es: "En Venta", subCategories: {
                     autoParts: { en: "Auto Parts", es: "Repuestos" },
+                    babyKids: { en: "Baby & Kids", es: "Bebés y Niños" },
+                    boats: { en: "Boats & Marine", es: "Botes y Náutica" },
+                    booksMedia: { en: "Books & Media", es: "Libros y Medios" },
                     carsTrucks: { en: "Cars & Trucks", es: "Carros y Camiones" },
+                    clothes: { en: "Clothes & Accessories", es: "Ropa y Accesorios" },
                     electronics: { en: "Electronics", es: "Electrónicos" },
+                    farmProduce: { en: "Farm & Produce", es: "Productos de Finca" },
                     furniture: { en: "Furniture", es: "Muebles" },
                     household: { en: "Household", es: "Artículos del Hogar" },
                     motorcycles: { en: "Motorcycles", es: "Motocicletas" },
+                    pets: { en: "Pets", es: "Mascotas" },
+                    sportingGoods: { en: "Sporting Goods", es: "Artículos Deportivos" },
+                    toolsGarden: { en: "Tools & Garden", es: "Herramientas y Jardín" },
                     free: { en: "Free", es: "Gratis" },
                 }
             },
             jobs: {
                 en: "Jobs", es: "Empleo", subCategories: {
                     adminOffice: { en: "Admin / Office", es: "Admin / Oficina" },
+                    agriculture: { en: "Agriculture / Farming", es: "Agricultura" },
+                    construction: { en: "Construction", es: "Construcción" },
                     customerService: { en: "Customer Service", es: "Servicio al Cliente" },
+                    education: { en: "Education / Teaching", es: "Educación / Docencia" },
+                    generalLabor: { en: "General Labor", es: "Trabajo General" },
+                    healthcare: { en: "Healthcare / Medical", es: "Salud / Medicina" },
                     hospitalityHotel: { en: "Hospitality / Hotel", es: "Hotelería / Hospitalidad" },
+                    hospitality: { en: "Hospitality / Hotel", es: "Hotelería / Hospitalidad" },
                     salesMarketing: { en: "Sales / Marketing", es: "Ventas / Mercadeo" },
                     softwareIT: { en: "Software / IT", es: "Software / TI" },
                     tourism: { en: "Tourism", es: "Turismo" },
-                    generalLabor: { en: "General Labor", es: "Trabajo General" },
                 }
             },
             services: {
                 en: "Services", es: "Servicios", subCategories: {
                     automotive: { en: "Automotive", es: "Automotriz" },
+                    beauty: { en: "Beauty & Personal Care", es: "Belleza y Cuidado Personal" },
+                    cleaningMoving: { en: "Cleaning & Moving", es: "Limpieza y Mudanzas" },
                     computer: { en: "Computer", es: "Computación" },
                     financial: { en: "Financial", es: "Financiero" },
                     legal: { en: "Legal", es: "Legal" },
                     lessons: { en: "Lessons & Tutoring", es: "Lecciones & Tutorías" },
+                    petCare: { en: "Pet Care", es: "Cuidado de Mascotas" },
+                    photography: { en: "Photography & Video", es: "Fotografía y Video" },
+                    propertyCare: { en: "Vacation Property Care", es: "Cuidado de Propiedades" },
                     realEstate: { en: "Real Estate", es: "Bienes Raíces" },
+                    realestate_service: { en: "Real Estate", es: "Bienes Raíces" },
                     skilledTrade: { en: "Skilled Trade", es: "Oficios" },
+                    skilledtrade: { en: "Skilled Trade", es: "Oficios" },
+                    toursGuides: { en: "Tours & Guides", es: "Tours y Guías" },
+                    transportTransfers: { en: "Transport & Transfers", es: "Transporte y Traslados" },
                 }
             },
             community: {
                 en: "Community", es: "Comunidad", subCategories: {
                     activities: { en: "Activities", es: "Actividades" },
                     classes: { en: "Classes", es: "Clases" },
+                    conservation: { en: "Conservation & Eco", es: "Conservación y Eco" },
                     events: { en: "Events", es: "Eventos" },
                     localNews: { en: "Local News", es: "Noticias Locales" },
                     lostFound: { en: "Lost & Found", es: "Perdidos y Encontrados" },
@@ -557,8 +569,6 @@
             });
 
 
-            // Update currency display based on language default (no change, but good to keep)
-            setCurrency(lang === 'es' ? 'crc' : 'usd');
         };
 
         // 3. Helper Functions
@@ -580,42 +590,6 @@
                 throw new Error("Listing not found");
             }
         }
-
-        // --- Currency Functions ---
-        function parsePrice(priceString) {
-            if (!priceString) return 0;
-            const cleaned = priceString.replace(/[^0-9.]/g, ''); // Remove all non-numeric chars except .
-            const value = parseFloat(cleaned);
-            if (isNaN(value)) return 0;
-
-            if (priceString.includes('₡')) {
-                return value / USD_TO_CRC_RATE; // Convert CRC to USD
-            }
-            // Assume USD if it contains '$' or no symbol
-            return value;
-        }
-
-        function updatePriceDisplay() {
-            let formattedPrice = '';
-            if (currentCurrency === 'usd') {
-                formattedPrice = `$${basePriceUSD.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; // Format as $1,000
-                currencyUsdBtn.classList.remove('opacity-50');
-                currencyCrcBtn.classList.add('opacity-50');
-            } else { // crc
-                const crcValue = basePriceUSD * USD_TO_CRC_RATE;
-                formattedPrice = `₡${crcValue.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`; // Format as ₡500 000
-                currencyCrcBtn.classList.remove('opacity-50');
-                currencyUsdBtn.classList.add('opacity-50');
-            }
-            listingPrice.textContent = formattedPrice;
-        }
-
-        function setCurrency(currency) {
-            currentCurrency = currency;
-            updatePriceDisplay();
-        }
-        window.setCurrency = setCurrency; // Make available to HTML onclick
-        // --- End Currency Functions ---
 
         // --- NEW: Gallery Functions ---
         function updateGalleryView() {
@@ -653,9 +627,9 @@
             // --- NEW: Store listing owner ID ---
             currentListingOwnerId = ad.userId || null;
 
-            // --- Price Parsing ---
-            basePriceUSD = parsePrice(ad.price); // Parse and store base USD price
-            updatePriceDisplay(); // Display initial price
+            listingPrice.textContent = window.formatListingPrice
+                ? window.formatListingPrice(ad, currentLang)
+                : (ad.price || (currentLang === 'es' ? 'Consultar' : 'Ask'));
 
             if (ad.createdAt && ad.createdAt.seconds) {
                 listingDate.dataset.timestamp = ad.createdAt.seconds;
@@ -691,7 +665,7 @@
                 roomsEl.className = 'mr-6 mb-2';
                 roomsEl.innerHTML = `
                     <strong><span class="lang-en">Rooms:</span><span class="lang-es">Habitaciones:</span></strong>
-                    <span class="ml-2">${ad.rooms}</span>
+                    <span class="ml-2">${window.escapeHtmlText(ad.rooms)}</span>
                 `;
                 dynamicDetails.appendChild(roomsEl);
             }
@@ -700,7 +674,7 @@
                 bathsEl.className = 'mr-6 mb-2';
                 bathsEl.innerHTML = `
                     <strong><span class="lang-en">Baths:</span><span class="lang-es">Baños:</span></strong>
-                    <span class="ml-2">${ad.baths}</span>
+                    <span class="ml-2">${window.escapeHtmlText(ad.baths)}</span>
                 `;
                 dynamicDetails.appendChild(bathsEl);
             }

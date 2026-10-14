@@ -228,7 +228,21 @@ window.runSessionLogic = runSessionLogic;
 
 // --- 3. LANGUAGE TOGGLE ---
 
+const LANG_STORAGE_KEY = 'nunciaya-lang';
+const DEFAULT_LANG = 'es';
+
+function getPreferredLang() {
+    const stored = localStorage.getItem(LANG_STORAGE_KEY);
+    return stored === 'en' ? 'en' : DEFAULT_LANG;
+}
+
 function setLang(lang, textMap = {}) {
+    if (lang !== 'en' && lang !== 'es') {
+        lang = getPreferredLang();
+    } else {
+        localStorage.setItem(LANG_STORAGE_KEY, lang);
+    }
+
     const enElements = document.querySelectorAll('.lang-en');
     const esElements = document.querySelectorAll('.lang-es');
     const btnEn = document.getElementById('lang-btn-en');
@@ -273,6 +287,102 @@ function setLang(lang, textMap = {}) {
     }
 }
 window.setLang = setLang;
+window.getPreferredLang = getPreferredLang;
+
+/**
+ * Resolves listing currency from stored field or price string (legacy ads).
+ * @returns {'usd'|'crc'|null}
+ */
+function getListingCurrency(listing) {
+    if (!listing) return null;
+    if (listing.currency === 'usd' || listing.currency === 'crc') return listing.currency;
+    const price = String(listing.price || '');
+    if (price.includes('₡')) return 'crc';
+    if (price.includes('$')) return 'usd';
+    return null;
+}
+
+function getListingPriceAmount(listing) {
+    if (!listing) return null;
+    if (listing.priceAmount != null && listing.priceAmount !== '') {
+        const n = Number(listing.priceAmount);
+        return Number.isFinite(n) ? n : null;
+    }
+    const price = String(listing.price || '');
+    if (!price) return null;
+    const cleaned = price.replace(/[^0-9.]/g, '');
+    const value = parseFloat(cleaned);
+    return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Formats price using only the currency selected when the ad was posted.
+ */
+function formatListingPrice(listing, lang) {
+    const askLabel = lang === 'es' ? 'Consultar' : 'Ask';
+    if (!listing) return askLabel;
+
+    const amount = getListingPriceAmount(listing);
+    const currency = getListingCurrency(listing);
+
+    if (amount == null) {
+        return listing.price || askLabel;
+    }
+
+    const locale = currency === 'crc' ? 'es-CR' : 'en-US';
+    const formatted = amount.toLocaleString(locale, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    });
+
+    if (currency === 'crc') return `₡${formatted}`;
+    if (currency === 'usd') return `$${formatted}`;
+    return listing.price || askLabel;
+}
+
+window.getListingCurrency = getListingCurrency;
+window.getListingPriceAmount = getListingPriceAmount;
+window.formatListingPrice = formatListingPrice;
+
+/** Escapes a value for safe use in HTML text and quoted attributes. */
+function escapeHtmlText(value) {
+    if (value == null) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * Returns a shallow copy of a listing with every top-level string (and string in an array)
+ * HTML-escaped, so card templates built with innerHTML can't run user-supplied markup.
+ * Non-string values (numbers, Timestamps, nested objects) are left untouched.
+ */
+function escapeListingForHtml(listing) {
+    if (!listing || typeof listing !== 'object') return listing;
+    const out = { ...listing };
+    Object.keys(out).forEach((key) => {
+        const v = out[key];
+        if (typeof v === 'string') {
+            out[key] = escapeHtmlText(v);
+        } else if (Array.isArray(v)) {
+            out[key] = v.map((item) => (typeof item === 'string' ? escapeHtmlText(item) : item));
+        }
+    });
+    return out;
+}
+
+window.escapeHtmlText = escapeHtmlText;
+window.escapeListingForHtml = escapeListingForHtml;
+
+/** Algolia numeric filter — sold ads stay visible until publicVisibleUntilSeconds (48h after sold). */
+function getPublicListingVisibilityFilter() {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    return `publicVisibleUntilSeconds > ${nowSeconds}`;
+}
+window.getPublicListingVisibilityFilter = getPublicListingVisibilityFilter;
 
 
 // --- 4. FIREBASE INITIALIZATION (Simplified Immediate Initialization) ---
@@ -282,6 +392,25 @@ window.firebaseAuthInstance = null;
 window.firestoreDbInstance = null;
 window.firebaseStorageInstance = null;
 let firebaseInitializationError = null; // Store potential error
+
+/**
+ * Ensure payments/promo helpers load even if a cached post-ad.html omits the script tag.
+ */
+(function loadPaymentsScriptSync() {
+    if (typeof window === 'undefined' || window.NunciaYaPayments) return;
+    if (typeof XMLHttpRequest === 'undefined') return;
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'js/payments.js?v=4', false);
+        xhr.send(null);
+        if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+            // eslint-disable-next-line no-new-func
+            (new Function(xhr.responseText))();
+        }
+    } catch (err) {
+        console.error('[NunciaYa] Could not load payments.js:', err);
+    }
+})();
 
 function initializeFirebaseCore() {
     console.log("Attempting Firebase initialization (Core)...");
@@ -293,18 +422,27 @@ function initializeFirebaseCore() {
         return false; // Indicate failure
     }
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDebDNPmp0WC_LeFQr-KCbAILlugxD9tvc",
-        authDomain: "nunciaya-web.firebaseapp.com",
-        projectId: "nunciaya-web",
-        storageBucket: "nunciaya-web.appspot.com", // Corrected
-        messagingSenderId: "1041609975205",
-        appId: "1:1041609975205:web:8392b04db51684a6a4344c"
-    };
+    // Use centralized config from config.js, fallback to hardcoded for backward compatibility
+    let firebaseConfig;
+    if (typeof window !== 'undefined' && window.config && window.config.firebase) {
+        firebaseConfig = window.config.firebase;
+        console.log("Using Firebase config from config.js");
+    } else {
+        // Fallback to hardcoded config (for backward compatibility)
+        console.warn("config.js not loaded, using fallback Firebase config. Please include config.js before app.js");
+        firebaseConfig = {
+            apiKey: "AIzaSyDebDNPmp0WC_LeFQr-KCbAILlugxD9tvc",
+            authDomain: "nunciaya.com",
+            projectId: "nunciaya-web",
+            storageBucket: "nunciaya-web.firebasestorage.app",
+            messagingSenderId: "1041609975205",
+            appId: "1:1041609975205:web:8392b04db51684a6a4344c"
+        };
+    }
 
     // Check placeholder config
-    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-        firebaseInitializationError = "Firebase config is not set in app.js.";
+    if (!firebaseConfig || firebaseConfig.apiKey === "YOUR_API_KEY" || !firebaseConfig.apiKey) {
+        firebaseInitializationError = "Firebase config is not set. Please check config.js or app.js.";
         console.error(firebaseInitializationError);
         alert("Firebase is not configured.");
         return false; // Indicate failure
@@ -362,7 +500,121 @@ if (!firebaseInitialized) {
     // Pages will check the instances and show errors if needed
 }
 
-// Remove the async initializeFirebase function
-// window.initializeFirebase = initializeFirebase;
+// --- 5. SESSION INACTIVITY TIMEOUT ---
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes of inactivity
+const ACTIVITY_THROTTLE_MS = 30 * 1000;   // Reset timer at most once per 30 seconds
+const SESSION_LAST_ACTIVITY_KEY = 'nunciaya-session-last-activity';
+
+let inactivityTimeoutId = null;
+let lastActivityResetAt = 0;
+
+function performSessionTimeout() {
+    inactivityTimeoutId = null;
+    const auth = window.firebaseAuthInstance;
+    if (auth && auth.currentUser) {
+        try {
+            auth.signOut();
+        } catch (e) {
+            console.warn('SignOut during timeout:', e);
+        }
+    }
+    localStorage.removeItem('nunciaya-user-session');
+    localStorage.removeItem(SESSION_LAST_ACTIVITY_KEY);
+    try {
+        sessionStorage.setItem('nunciaya-session-timeout', '1');
+    } catch (err) { /* ignore */ }
+    console.log('Session ended due to inactivity.');
+    if (typeof window.__sessionTimeoutRedirect === 'function') {
+        window.__sessionTimeoutRedirect();
+    } else {
+        window.location.reload();
+    }
+}
+
+function checkSessionExpired() {
+    const hasSession = localStorage.getItem('nunciaya-user-session');
+    if (!hasSession) return;
+    try {
+        const lastStr = localStorage.getItem(SESSION_LAST_ACTIVITY_KEY);
+        if (!lastStr) return;
+        const last = parseInt(lastStr, 10);
+        if (isNaN(last)) return;
+        if (Date.now() - last >= SESSION_TIMEOUT_MS) {
+            performSessionTimeout();
+        }
+    } catch (e) { /* ignore */ }
+}
+
+function syncUserPresenceToFirestore() {
+    const auth = window.firebaseAuthInstance;
+    const db = window.firestoreDbInstance;
+    if (!auth || !db || !auth.currentUser || auth.currentUser.isAnonymous) return;
+    if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.firestore.FieldValue) return;
+    db.collection('users').doc(auth.currentUser.uid).set({
+        lastActiveAt: firebase.firestore.FieldValue.serverTimestamp(),
+        email: auth.currentUser.email || null,
+    }, { merge: true }).catch(() => { /* non-blocking */ });
+}
+
+function recordActivity() {
+    const now = Date.now();
+    try {
+        localStorage.setItem(SESSION_LAST_ACTIVITY_KEY, String(now));
+    } catch (e) { /* ignore */ }
+    if (now - lastActivityResetAt < ACTIVITY_THROTTLE_MS) return;
+    lastActivityResetAt = now;
+    syncUserPresenceToFirestore();
+    if (inactivityTimeoutId) clearTimeout(inactivityTimeoutId);
+    inactivityTimeoutId = setTimeout(performSessionTimeout, SESSION_TIMEOUT_MS);
+}
+
+function setupSessionInactivityListeners() {
+    const auth = window.firebaseAuthInstance;
+    const hasSession = localStorage.getItem('nunciaya-user-session');
+    if (!hasSession || !auth) return;
+
+    // On load: if last activity was long ago, sign out now (handles new tab / navigation after idle)
+    checkSessionExpired();
+
+    // If still logged in, set initial last-activity and start timer
+    recordActivity();
+
+    const events = ['mousedown', 'keydown', 'scroll', 'click', 'touchstart'];
+    events.forEach(ev => {
+        document.addEventListener(ev, recordActivity, { passive: true });
+    });
+
+    // Check on visibility change (user returns to tab) – browsers throttle setTimeout in background
+    document.addEventListener('visibilitychange', function onVisibilityChange() {
+        if (document.visibilityState === 'visible') {
+            checkSessionExpired();
+        }
+    });
+
+    // Check on focus (e.g. user switches back to window)
+    window.addEventListener('focus', checkSessionExpired);
+
+    // Show message if user was just signed out due to inactivity
+    try {
+        if (sessionStorage.getItem('nunciaya-session-timeout')) {
+            sessionStorage.removeItem('nunciaya-session-timeout');
+            const banner = document.createElement('div');
+            banner.setAttribute('role', 'alert');
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#2563eb;color:#fff;text-align:center;padding:10px;font-size:14px;';
+            banner.textContent = 'You were signed out due to inactivity. Please sign in again.';
+            document.body.prepend(banner);
+            setTimeout(() => banner.remove(), 6000);
+        }
+    } catch (e) { /* ignore */ }
+}
+
+
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupSessionInactivityListeners);
+    } else {
+        setupSessionInactivityListeners();
+    }
+}
 
 console.log("app.js loaded and executed.");

@@ -3,7 +3,25 @@ body {
     font-family: "Inter", sans-serif, Arial;
 }
 
-/* Compiled from Tailwind: 
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Prevent horizontal scroll from nested flex/grid overflow */
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+img,
+video,
+iframe,
+svg {
+    max-width: 100%;
+}
+
+/* Compiled from Tailwind:
   .category-link {
     @apply text-blue-700 hover:underline;
   }
@@ -15,18 +33,20 @@ body {
     text-decoration-line: underline;
 }
 
-/* Compiled from Tailwind: 
+/* Compiled from Tailwind:
   .category-block {
     @apply w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5 p-4;
   }
 */
 .category-block {
     width: 100%;
-    padding: 1rem; /* 16px */
+    padding: 0.75rem 1rem;
+    box-sizing: border-box;
 }
 @media (min-width: 640px) {
     .category-block {
         width: 50%;
+        padding: 1rem;
     }
 }
 @media (min-width: 768px) {
@@ -51,10 +71,10 @@ body {
   }
 */
 .category-title {
-    font-size: 1.125rem; /* 18px */
-    line-height: 1.75rem; /* 28px */
+    font-size: 1.125rem;
+    line-height: 1.75rem;
     font-weight: 700;
-    margin-bottom: 0.5rem; /* 8px */
+    margin-bottom: 0.5rem;
 }
 
 /* Compiled from Tailwind:
@@ -63,10 +83,146 @@ body {
   }
 */
 .subcategory-list li {
-    margin-bottom: 0.25rem; /* 4px */
+    margin-bottom: 0.25rem;
+}
+
+@media (max-width: 640px) {
+    .subcategory-list li {
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
+    }
+
+    .subcategory-list a {
+        display: inline-block;
+        padding: 0.15rem 0;
+    }
 }
 
 /* Hide Spanish by default */
 .lang-es {
     display: none;
+}
+
+/* ---------- Mobile layout ---------- */
+@media (max-width: 640px) {
+    main.container,
+    .container {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        box-sizing: border-box;
+    }
+
+    /* Homepage title */
+    main h2.text-4xl {
+        font-size: 1.875rem;
+        line-height: 2.25rem;
+        text-align: center;
+    }
+
+    /* Homepage search: full width, comfortable tap targets */
+    #search-form {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #search-form input,
+    #search-form button {
+        min-height: 2.75rem;
+    }
+
+    /* Category columns: avoid negative-margin overflow */
+    .flex.flex-wrap.-mx-4 {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    /* Listing / search filter toolbars */
+    #search-input,
+    .filter-input {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    form.flex-grow {
+        flex: 1 1 100%;
+        min-width: 100% !important;
+        width: 100%;
+    }
+
+    .filter-btn {
+        flex: 1 1 calc(50% - 0.5rem);
+        text-align: center;
+        min-height: 2.5rem;
+    }
+
+    .filter-select,
+    #filter-sort {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    #radius-mini-map {
+        height: 180px !important;
+        max-width: 100%;
+    }
+
+    /* Listing cards: keep text from blowing out the row */
+    #listings-container.view-list .listing-item,
+    #results-container.view-list .listing-item,
+    #listings-container.view-compact .listing-item,
+    #results-container.view-compact .listing-item {
+        gap: 0.75rem;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    #listings-container.view-list .listing-image-wrapper,
+    #results-container.view-list .listing-image-wrapper {
+        width: 4.5rem;
+        height: 4.5rem;
+        margin-right: 0;
+    }
+
+    #listings-container.view-list .listing-details-wrapper,
+    #results-container.view-list .listing-details-wrapper,
+    #listings-container.view-compact .listing-details-wrapper,
+    #results-container.view-compact .listing-details-wrapper {
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    #listings-container.view-list .listing-actions-wrapper,
+    #results-container.view-list .listing-actions-wrapper,
+    #listings-container.view-compact .listing-actions-wrapper,
+    #results-container.view-compact .listing-actions-wrapper {
+        margin-left: 0;
+    }
+
+    #listings-container.view-list .listing-title,
+    #results-container.view-list .listing-title {
+        font-size: 1rem;
+        line-height: 1.35;
+    }
+
+    #listings-container.view-grid,
+    #results-container.view-grid {
+        grid-template-columns: 1fr;
+        padding: 0.75rem;
+        gap: 0.75rem;
+    }
+
+    /* Post-ad form */
+    #post-ad-form {
+        padding: 1rem;
+    }
+
+    /* Leaflet attribution shouldn't force overflow */
+    .leaflet-container {
+        max-width: 100%;
+    }
 }

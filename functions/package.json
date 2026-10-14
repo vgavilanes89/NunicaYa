@@ -16,7 +16,8 @@
   "dependencies": {
     "algoliasearch": "^4.20.0",
     "firebase-admin": "^12.1.1",
-    "firebase-functions": "^5.1.1"
+    "firebase-functions": "^5.1.1",
+    "stripe": "^17.7.0"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.1.0"

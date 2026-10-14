@@ -16,12 +16,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <!-- Add Storage SDK (Needed if you plan ad editing/deleting images) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     
     <!-- Custom Modal Styles -->
     <style>
         /* Ensure modal spans are handled correctly for language */
         #confirmation-modal .lang-en,
-        #confirmation-modal .lang-es {
+        #confirmation-modal .lang-es,
+        #support-modal .lang-en,
+        #support-modal .lang-es,
+        #referral-modal .lang-en,
+        #referral-modal .lang-es {
             display: none; /* Hide both by default */
         }
     </style>
@@ -53,6 +58,14 @@
                     </h3>
                     <div class="space-y-4">
                         <div>
+                            <label for="profile-display-name" class="block text-sm font-medium text-gray-700">
+                                <span class="lang-en">Display Name</span>
+                                <span class="lang-es">Nombre Para Mostrar</span>
+                            </label>
+                            <input type="text" id="profile-display-name" readonly
+                                class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">
+                        </div>
+                        <div>
                             <label for="profile-name" class="block text-sm font-medium text-gray-700">
                                 <span class="lang-en">Full Name</span>
                                 <span class="lang-es">Nombre Completo</span>
@@ -77,10 +90,31 @@
                                 class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">
                         </div>
                     </div>
+                    <div class="mt-4 p-3 rounded-md bg-blue-50 border border-blue-100">
+                        <p class="text-sm font-medium text-blue-900">
+                            <span class="lang-en">Referral rewards</span>
+                            <span class="lang-es">Recompensas por referidos</span>
+                        </p>
+                        <p class="text-2xl font-bold text-blue-700 mt-1" id="referral-points-display">0</p>
+                        <p class="text-xs text-blue-800 mt-1">
+                            <span class="lang-en"><span id="referral-count-display">0</span> friends joined · 1 point each</span>
+                            <span class="lang-es"><span id="referral-count-display-es">0</span> amigos se unieron · 1 punto c/u</span>
+                        </p>
+                    </div>
+                    <button type="button" id="refer-friend-button"
+                        class="mt-4 w-full bg-green-600 text-white p-2 rounded-md hover:bg-green-700">
+                        <span class="lang-en">Refer a Friend</span>
+                        <span class="lang-es">Referir a un Amigo</span>
+                    </button>
                     <p class="text-xs text-gray-500 mt-4">
-                        <span class="lang-en">To update your details, please contact support.</span>
-                        <span class="lang-es">Para actualizar sus datos, por favor contacte a soporte.</span>
+                        <span class="lang-en">Profile details are read-only. Contact support to request changes.</span>
+                        <span class="lang-es">Los datos del perfil son de solo lectura. Contacte a soporte para solicitar cambios.</span>
                     </p>
+                    <button type="button" id="contact-support-button"
+                        class="mt-4 w-full bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700">
+                        <span class="lang-en">Contact Support</span>
+                        <span class="lang-es">Contactar Soporte</span>
+                    </button>
                     <button id="logout-button"
                         class="mt-6 w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700">
                         <span class="lang-en">Logout</span>
@@ -163,13 +197,102 @@
         </div>
     </div>
 
+    <!-- Contact Support Modal -->
+    <div id="support-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-start gap-4">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-900">
+                        <span class="lang-en">Contact Support</span>
+                        <span class="lang-es">Contactar Soporte</span>
+                    </h3>
+                    <p class="mt-1 text-sm text-gray-500">
+                        <span class="lang-en">Request profile or account changes. We typically respond within 1–2 business days.</span>
+                        <span class="lang-es">Solicite cambios en su perfil o cuenta. Normalmente respondemos en 1–2 días hábiles.</span>
+                    </p>
+                </div>
+                <button type="button" id="support-modal-close" class="text-gray-400 hover:text-gray-600 text-2xl leading-none" aria-label="Close">&times;</button>
+            </div>
+            <form id="support-form" class="p-6 space-y-4" novalidate>
+                <div>
+                    <label for="support-topic" class="block text-sm font-medium text-gray-700 required-label">
+                        <span class="lang-en">Subject</span>
+                        <span class="lang-es">Asunto</span>
+                    </label>
+                    <select id="support-topic" name="topic" required
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="" disabled selected>--</option>
+                        <option value="profile-display-name">
+                            <span class="lang-en">Change my display name</span>
+                            <span class="lang-es">Cambiar mi nombre visible</span>
+                        </option>
+                        <option value="profile-full-name">
+                            <span class="lang-en">Change my full name</span>
+                            <span class="lang-es">Cambiar mi nombre completo</span>
+                        </option>
+                        <option value="profile-phone">
+                            <span class="lang-en">Change my phone number</span>
+                            <span class="lang-es">Cambiar mi número de teléfono</span>
+                        </option>
+                        <option value="profile-email">
+                            <span class="lang-en">Change my email address</span>
+                            <span class="lang-es">Cambiar mi correo electrónico</span>
+                        </option>
+                        <option value="account-access">
+                            <span class="lang-en">Account access (password, login)</span>
+                            <span class="lang-es">Acceso a la cuenta (clave, ingreso)</span>
+                        </option>
+                        <option value="ad-issue">
+                            <span class="lang-en">Issue with one of my ads</span>
+                            <span class="lang-es">Problema con uno de mis anuncios</span>
+                        </option>
+                        <option value="other">
+                            <span class="lang-en">Other</span>
+                            <span class="lang-es">Otro</span>
+                        </option>
+                    </select>
+                </div>
+                <div>
+                    <label for="support-message" class="block text-sm font-medium text-gray-700 required-label">
+                        <span class="lang-en">Message</span>
+                        <span class="lang-es">Mensaje</span>
+                    </label>
+                    <textarea id="support-message" name="message" rows="5" required
+                        placeholder=""
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <span class="lang-en">Include the new value you want (e.g. updated phone or name).</span>
+                        <span class="lang-es">Incluya el nuevo valor que desea (p. ej. teléfono o nombre actualizado).</span>
+                    </p>
+                </div>
+                <div id="support-form-message" class="text-sm text-center hidden"></div>
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
+                    <button type="button" id="support-cancel-btn"
+                        class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <span class="lang-en">Cancel</span>
+                        <span class="lang-es">Cancelar</span>
+                    </button>
+                    <button type="submit" id="support-submit-btn"
+                        class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="lang-en">Send Message</span>
+                        <span class="lang-es">Enviar Mensaje</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- Main Application Script -->
+    <script src="config.js"></script>
     <script src="app.js"></script>
+    <script src="js/referrals.js?v=2"></script>
+    <script src="js/referral-ui.js?v=2"></script>
 
     <!-- Page-Specific Script -->
     <script>
         // --- 1. Page Elements & State ---
+        const profileDisplayName = document.getElementById('profile-display-name');
         const profileName = document.getElementById('profile-name');
         const profileEmail = document.getElementById('profile-email');
         const profilePhone = document.getElementById('profile-phone');
@@ -178,6 +301,21 @@
         const favoritesContainer = document.getElementById('my-favorites-container');
         const favoritesLoadingMsg = document.getElementById('favorites-loading-msg');
         const logoutButton = document.getElementById('logout-button');
+        const contactSupportButton = document.getElementById('contact-support-button');
+        const referFriendButton = document.getElementById('refer-friend-button');
+        const referralPointsDisplay = document.getElementById('referral-points-display');
+        const referralCountDisplay = document.getElementById('referral-count-display');
+        const referralCountDisplayEs = document.getElementById('referral-count-display-es');
+
+        // Support modal elements
+        const supportModal = document.getElementById('support-modal');
+        const supportForm = document.getElementById('support-form');
+        const supportTopic = document.getElementById('support-topic');
+        const supportMessage = document.getElementById('support-message');
+        const supportSubmitBtn = document.getElementById('support-submit-btn');
+        const supportFormMessage = document.getElementById('support-form-message');
+        const supportModalClose = document.getElementById('support-modal-close');
+        const supportCancelBtn = document.getElementById('support-cancel-btn');
 
         // Modal Elements
         const confirmationModal = document.getElementById('confirmation-modal');
@@ -188,16 +326,152 @@
         let modalCancelBtn = document.getElementById('modal-cancel-btn');
 
         const pageSpecificText = {
+            'profile-display-name': { en: 'Loading...', es: 'Cargando...' },
             'profile-name': { en: 'Loading...', es: 'Cargando...' },
             'profile-email': { en: 'Loading...', es: 'Cargando...' },
             'profile-phone': { en: 'Loading...', es: 'Cargando...' }
         };
-        let currentLang = 'es';
+        let currentLang = window.getPreferredLang ? window.getPreferredLang() : 'es';
 
         // Firebase instances
         let db = null;
         let auth = null;
         let storage = null;
+        let currentProfileUser = null;
+        let currentProfileUserData = null;
+
+        const SUPPORT_TOPIC_LABELS = {
+            '': { en: '-- Please select a subject --', es: '-- Por favor seleccione un asunto --' },
+            'profile-display-name': { en: 'Change my display name', es: 'Cambiar mi nombre visible' },
+            'profile-full-name': { en: 'Change my full name', es: 'Cambiar mi nombre completo' },
+            'profile-phone': { en: 'Change my phone number', es: 'Cambiar mi número de teléfono' },
+            'profile-email': { en: 'Change my email address', es: 'Cambiar mi correo electrónico' },
+            'account-access': { en: 'Account access (password, login)', es: 'Acceso a la cuenta (clave, ingreso)' },
+            'ad-issue': { en: 'Issue with one of my ads', es: 'Problema con uno de mis anuncios' },
+            'other': { en: 'Other', es: 'Otro' }
+        };
+
+        function getSupportEmail() {
+            return (window.config && window.config.app && window.config.app.supportEmail) || 'support@nunciaya.com';
+        }
+
+        function updateSupportTopicOptions() {
+            if (!supportTopic) return;
+            const selected = supportTopic.value;
+            supportTopic.querySelectorAll('option').forEach(option => {
+                const labels = SUPPORT_TOPIC_LABELS[option.value];
+                if (labels) {
+                    option.textContent = labels[currentLang] || labels.en;
+                }
+            });
+            supportTopic.value = selected;
+        }
+
+        function updateSupportModalLang() {
+            if (!supportModal) return;
+            supportModal.querySelectorAll('.lang-en, .lang-es').forEach(el => {
+                el.style.display = el.classList.contains(`lang-${currentLang}`) ? 'inline' : 'none';
+            });
+            updateSupportTopicOptions();
+            const placeholder = currentLang === 'es'
+                ? 'Describa el cambio que necesita...'
+                : 'Describe the change you need...';
+            if (supportMessage) supportMessage.placeholder = placeholder;
+        }
+
+        function showSupportFormMessage(message, isError = false) {
+            supportFormMessage.textContent = message;
+            supportFormMessage.className = `text-sm text-center ${isError ? 'text-red-600' : 'text-green-600'}`;
+            supportFormMessage.classList.remove('hidden');
+        }
+
+        function hideSupportFormMessage() {
+            supportFormMessage.textContent = '';
+            supportFormMessage.classList.add('hidden');
+        }
+
+        function openSupportModal() {
+            hideSupportFormMessage();
+            if (supportForm) supportForm.reset();
+            updateSupportModalLang();
+            supportModal.classList.remove('hidden');
+            supportModal.classList.add('flex');
+            if (supportTopic) supportTopic.focus();
+        }
+
+        function closeSupportModal() {
+            supportModal.classList.add('hidden');
+            supportModal.classList.remove('flex');
+            hideSupportFormMessage();
+        }
+
+        async function handleSupportSubmit(event) {
+            event.preventDefault();
+            hideSupportFormMessage();
+
+            if (!supportForm.checkValidity()) {
+                showSupportFormMessage(
+                    currentLang === 'es' ? 'Por favor complete todos los campos requeridos.' : 'Please fill out all required fields.',
+                    true
+                );
+                return;
+            }
+            if (!db || !currentProfileUser) {
+                showSupportFormMessage(
+                    currentLang === 'es' ? 'Error: no se pudo conectar. Intente de nuevo.' : 'Error: could not connect. Please try again.',
+                    true
+                );
+                return;
+            }
+
+            supportSubmitBtn.disabled = true;
+            const enBtn = supportSubmitBtn.querySelector('.lang-en');
+            const esBtn = supportSubmitBtn.querySelector('.lang-es');
+            if (enBtn) enBtn.textContent = 'Sending...';
+            if (esBtn) esBtn.textContent = 'Enviando...';
+
+            const topic = supportTopic.value;
+            const message = supportMessage.value.trim();
+            const topicLabel = (SUPPORT_TOPIC_LABELS[topic] && SUPPORT_TOPIC_LABELS[topic][currentLang]) || topic;
+            const name = currentProfileUserData?.fullName || currentProfileUserData?.displayName || currentProfileUser.displayName || '';
+            const email = currentProfileUser.email || '';
+            const phone = currentProfileUserData?.phone || profilePhone.value || '';
+
+            try {
+                await db.collection('help-requests').add({
+                    name,
+                    email,
+                    phone: phone === 'N/A' ? '' : phone,
+                    topic,
+                    topicLabel,
+                    message,
+                    source: 'profile',
+                    supportEmail: getSupportEmail(),
+                    submittedAt: firebase.firestore.Timestamp.now(),
+                    status: 'new',
+                    userId: currentProfileUser.uid
+                });
+
+                showSupportFormMessage(
+                    currentLang === 'es'
+                        ? '¡Mensaje enviado! Nos pondremos en contacto pronto.'
+                        : 'Message sent! We will be in touch soon.',
+                    false
+                );
+                supportForm.reset();
+                setTimeout(closeSupportModal, 2000);
+            } catch (error) {
+                console.error('Error submitting support request:', error);
+                showSupportFormMessage(
+                    currentLang === 'es' ? 'Error al enviar. Por favor, intente de nuevo.' : 'Error sending message. Please try again.',
+                    true
+                );
+            } finally {
+                supportSubmitBtn.disabled = false;
+                if (enBtn) enBtn.textContent = 'Send Message';
+                if (esBtn) esBtn.textContent = 'Enviar Mensaje';
+            }
+        }
 
         // --- 2. Language Setup ---
         const originalSetLang = window.setLang;
@@ -232,6 +506,7 @@
             modalCancelBtn.querySelectorAll('span').forEach(el => {
                 el.style.display = el.classList.contains(`lang-${lang}`) ? 'inline' : 'none';
             });
+            updateSupportModalLang();
         };
         
         // --- 3. Display Helpers ---
@@ -294,22 +569,28 @@
 
         async function loadUserProfile(currentUser) {
             if (!currentUser || !db) return;
+            currentProfileUser = currentUser;
             profileEmail.value = currentUser.email || 'N/A';
             const userDocRef = db.collection("users").doc(currentUser.uid);
             try {
                 const docSnap = await userDocRef.get();
                 if (docSnap.exists) {
                     const userData = docSnap.data();
+                    currentProfileUserData = userData;
+                    profileDisplayName.value = userData.displayName || currentUser.displayName || 'N/A';
                     profileName.value = userData.fullName || 'N/A';
                     profilePhone.value = userData.phone || 'N/A';
                     console.log("User profile data loaded:", userData);
                 } else {
+                    currentProfileUserData = null;
                     console.warn("No user profile document found in Firestore for UID:", currentUser.uid);
+                    profileDisplayName.value = currentUser.displayName || 'N/A';
                     profileName.value = 'N/A';
                     profilePhone.value = 'N/A';
                 }
             } catch (error) {
                 console.error("Error fetching user profile:", error);
+                profileDisplayName.value = 'Error';
                 profileName.value = 'Error';
                 profilePhone.value = 'Error';
                 displayMessage('firestore-error');
@@ -344,6 +625,11 @@
             }
         }
 
+        function safeFavDocId(listingId) {
+            const s = String(listingId || '').replace(/[/\\.]/g, '_').replace(/^__|__$/g, '');
+            return s.length ? s.substring(0, 1500) : 'unknown';
+        }
+
         async function loadUserFavorites(currentUser) {
             if (!currentUser || !db) return;
             favoritesLoadingMsg.style.display = 'block';
@@ -351,10 +637,16 @@
             favoritesContainer.appendChild(favoritesLoadingMsg);
 
             try {
-                // 1. Get the list of favorite IDs
-                const favoritesSnapshot = await db.collection("users").doc(currentUser.uid).collection("favorites")
-                    .orderBy("addedAt", "desc")
-                    .get();
+                const favColRef = db.collection("users").doc(currentUser.uid).collection("favorites");
+                let favoritesSnapshot;
+                try {
+                    favoritesSnapshot = await favColRef.orderBy("addedAt", "desc").get();
+                } catch (orderError) {
+                    if (orderError && (orderError.code === 'permission-denied' || orderError.code === 7 || (orderError.message && orderError.message.toLowerCase().indexOf('permission') !== -1))) {
+                        throw orderError;
+                    }
+                    favoritesSnapshot = await favColRef.get();
+                }
 
                 if (favoritesSnapshot.empty) {
                     favoritesLoadingMsg.style.display = 'none';
@@ -362,10 +654,9 @@
                     return;
                 }
 
-                // 2. Extract the listing IDs
-                const listingIds = favoritesSnapshot.docs.map(doc => doc.id);
+                const favDocs = favoritesSnapshot.docs;
+                const listingIds = favDocs.map(doc => (doc.data() && doc.data().listingId) || doc.id);
 
-                // 3. Fetch the actual listing documents
                 const fetchPromises = listingIds.map(id => db.collection("listings").doc(id).get());
                 const listingDocs = await Promise.all(fetchPromises);
 
@@ -373,14 +664,15 @@
                 favoritesContainer.innerHTML = '';
 
                 let favoritesFound = 0;
-                listingDocs.forEach(docSnap => {
+                listingDocs.forEach((docSnap, index) => {
+                    const listingId = listingIds[index];
+                    const favDocId = favDocs[index].id;
                     if (docSnap.exists) {
                         favoritesFound++;
                         favoritesContainer.appendChild(createFavoriteHTML(docSnap.data(), docSnap.id));
                     } else {
-                        console.warn(`Favorited listing ${docSnap.id} no longer exists.`);
-                        // Clean up orphan favorite
-                        db.collection("users").doc(currentUser.uid).collection("favorites").doc(docSnap.id).delete();
+                        console.warn(`Favorited listing ${listingId} no longer exists.`);
+                        db.collection("users").doc(currentUser.uid).collection("favorites").doc(favDocId).delete();
                     }
                 });
 
@@ -392,7 +684,11 @@
 
             } catch (error) {
                 console.error("Error fetching user favorites:", error);
-                favoritesLoadingMsg.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error loading favorites.</span><span class="lang-es">Error al cargar favoritos.</span></div>`;
+                const isPermission = error && (error.code === 'permission-denied' || error.code === 7 || (error.message && error.message.toLowerCase().indexOf('permission') !== -1));
+                const msgEn = isPermission ? 'Could not load favorites (permissions). Deploy Firestore rules: firebase deploy --only firestore:rules' : 'Error loading favorites.';
+                const msgEs = isPermission ? 'No se pueden cargar favoritos (permisos). Despliegue las reglas: firebase deploy --only firestore:rules' : 'Error al cargar favoritos.';
+                favoritesLoadingMsg.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">${msgEn}</span><span class="lang-es">${msgEs}</span></div>`;
+                if (window.setLang) window.setLang(currentLang);
             }
         }
 
@@ -400,13 +696,16 @@
          * NEW: Updated createAdHTML to handle 'sold' status and 'Mark as Sold' button
          */
         function createAdHTML(ad, adId) {
+            // Escaped copies for the innerHTML template; handlers below keep the raw values
+            const safeAd = window.escapeListingForHtml(ad);
+            const safeId = window.escapeHtmlText(adId);
             const adEl = document.createElement('div');
             // Add ad-item class and data-id for easier selection later
             adEl.className = 'ad-item p-4 flex flex-col sm:flex-row justify-between items-start';
             adEl.dataset.id = adId;
 
             const placeholderUrl = `https://placehold.co/100x100/EEE/333?text=${currentLang === 'es' ? 'Sin foto' : 'No photo'}`;
-            const imageUrl = (ad.imageUrls && ad.imageUrls.length > 0) ? ad.imageUrls[0] : placeholderUrl;
+            const imageUrl = (ad.imageUrls && ad.imageUrls.length > 0) ? safeAd.imageUrls[0] : placeholderUrl;
 
             // --- Status Logic ---
             let status = { en: 'Pending', es: 'Pendiente' };
@@ -429,27 +728,27 @@
 
             adEl.innerHTML = `
                 <div class="flex items-start">
-                    <a href="./pages/listing/detail.html?id=${adId}" class="flex-shrink-0">
+                    <a href="./pages/listing/detail.html?id=${safeId}" class="flex-shrink-0">
                         <img src="${imageUrl}" alt="Ad thumbnail" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-md" onerror="this.src='${placeholderUrl}'">
                     </a>
                     <div class="ml-4">
-                        <a href="./pages/listing/detail.html?id=${adId}" class="text-lg text-blue-700 hover:underline font-semibold">
-                            <span class="lang-en">${ad.title_en || ad.title_es || 'Untitled Ad'}</span>
-                            <span class="lang-es">${ad.title_es || ad.title_en || 'Anuncio sin Título'}</span>
+                        <a href="./pages/listing/detail.html?id=${safeId}" class="text-lg text-blue-700 hover:underline font-semibold">
+                            <span class="lang-en">${safeAd.title_en || safeAd.title_es || 'Untitled Ad'}</span>
+                            <span class="lang-es">${safeAd.title_es || safeAd.title_en || 'Anuncio sin Título'}</span>
                         </a>
                         <p class="text-sm text-gray-500">
                             <span class="font-medium ${statusColor} ad-status" data-en="${status.en}" data-es="${status.es}">
                                 ${status[currentLang]}
                             </span>
                             -
-                            <span class="listing-date" data-timestamp="${ad.createdAt?.seconds || ''}">${postDate}</span>
+                            <span class="listing-date" data-timestamp="${safeAd.createdAt?.seconds || ''}">${postDate}</span>
                         </p>
                     </div>
                 </div>
                 <!-- Action Buttons -->
                 <div class="flex-shrink-0 mt-4 sm:mt-0 sm:ml-4 text-sm space-x-4 ad-actions">
                     ${!isSold ? `
-                    <button class="text-green-600 hover:underline mark-sold-btn" data-id="${adId}">
+                    <button class="text-green-600 hover:underline mark-sold-btn" data-id="${safeId}">
                         <span class="lang-en">Mark as Sold</span>
                         <span class="lang-es">Marcar Vendido</span>
                     </button>` : `
@@ -458,11 +757,11 @@
                         <span class="lang-es">Vendido</span>
                     </span>
                     `}
-                    <button class="text-blue-700 hover:underline edit-ad-btn" data-id="${adId}">
+                    <button class="text-blue-700 hover:underline edit-ad-btn" data-id="${safeId}">
                         <span class="lang-en">Edit</span>
                         <span class="lang-es">Editar</span>
                     </button>
-                    <button class="text-red-600 hover:underline delete-ad-btn" data-id="${adId}">
+                    <button class="text-red-600 hover:underline delete-ad-btn" data-id="${safeId}">
                         <span class="lang-en">Delete</span>
                         <span class="lang-es">Borrar</span>
                     </button>
@@ -483,40 +782,43 @@
 
 
         function createFavoriteHTML(ad, adId) {
+            // Escaped copies for the innerHTML template; handlers below keep the raw values
+            const safeAd = window.escapeListingForHtml(ad);
+            const safeId = window.escapeHtmlText(adId);
             const adEl = document.createElement('div');
             adEl.className = 'p-4 flex justify-between items-center';
 
             const placeholderUrl = `https://placehold.co/100x100/EEE/333?text=${currentLang === 'es' ? 'Sin foto' : 'No photo'}`;
-            const imageUrl = (ad.imageUrls && ad.imageUrls.length > 0) ? ad.imageUrls[0] : placeholderUrl;
+            const imageUrl = (ad.imageUrls && ad.imageUrls.length > 0) ? safeAd.imageUrls[0] : placeholderUrl;
 
             let postDate = currentLang === 'es' ? 'Fecha inv.' : 'Invalid date';
             if (ad.createdAt && typeof ad.createdAt.toDate === 'function') {
                 postDate = ad.createdAt.toDate().toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US');
             }
-            const price = ad.price || (currentLang === 'es' ? 'Consultar' : 'Ask');
-            const zoneDisplay = ad.zone ? ad.zone.charAt(0).toUpperCase() + ad.zone.slice(1) : '';
+            const price = window.formatListingPrice ? window.formatListingPrice(safeAd, currentLang) : (safeAd.price || (currentLang === 'es' ? 'Consultar' : 'Ask'));
+            const zoneDisplay = safeAd.zone ? safeAd.zone.charAt(0).toUpperCase() + safeAd.zone.slice(1) : '';
 
 
             adEl.innerHTML = `
                 <div class="flex items-start">
-                    <a href="./pages/listing/detail.html?id=${adId}" class="flex-shrink-0">
+                    <a href="./pages/listing/detail.html?id=${safeId}" class="flex-shrink-0">
                          <img src="${imageUrl}" alt="Ad thumbnail" class="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-md" onerror="this.src='${placeholderUrl}'">
                     </a>
                     <div class="ml-4">
-                        <a href="./pages/listing/detail.html?id=${adId}" class="text-lg text-blue-700 hover:underline font-semibold">
-                            <span class="lang-en">${ad.title_en || ad.title_es || 'Untitled Ad'}</span>
-                            <span class="lang-es">${ad.title_es || ad.title_en || 'Anuncio sin Título'}</span>
+                        <a href="./pages/listing/detail.html?id=${safeId}" class="text-lg text-blue-700 hover:underline font-semibold">
+                            <span class="lang-en">${safeAd.title_en || safeAd.title_es || 'Untitled Ad'}</span>
+                            <span class="lang-es">${safeAd.title_es || safeAd.title_en || 'Anuncio sin Título'}</span>
                         </a>
                         <p class="text-sm text-gray-500">
                             <span class="font-medium text-gray-800">${price}</span>
                             ${zoneDisplay ? `<span class="ml-2">${zoneDisplay}</span>` : ''}
                             -
-                            <span class="listing-date" data-timestamp="${ad.createdAt?.seconds || ''}">${postDate}</span>
+                            <span class="listing-date" data-timestamp="${safeAd.createdAt?.seconds || ''}">${postDate}</span>
                         </p>
                     </div>
                 </div>
                 <div class="flex-shrink-0 ml-4">
-                    <button class="text-red-600 hover:underline text-sm remove-favorite-btn" data-id="${adId}">
+                    <button class="text-red-600 hover:underline text-sm remove-favorite-btn" data-id="${safeId}">
                         <span class="lang-en">Remove</span>
                         <span class="lang-es">Quitar</span>
                     </button>
@@ -592,8 +894,8 @@
         // --- NEW: Handle Mark as Sold ---
         async function handleMarkAsSold(adId) {
             const confirmSold = await showConfirmationModal(
-                'Are you sure you want to mark this ad as sold? This ad will be scheduled for deletion in 14 days.',
-                '¿Está seguro que desea marcar este anuncio como vendido? El anuncio será programado para borrarse en 14 días.'
+                'Mark this ad as sold? It will stay visible in public listings for 48 hours, then hide from search while remaining on your profile.',
+                '¿Marcar como vendido? Seguirá visible en los listados públicos por 48 horas y luego se ocultará de las búsquedas, pero permanecerá en su perfil.'
             );
 
             if (!confirmSold) return;
@@ -603,19 +905,25 @@
                 return;
             }
 
-            // Calculate deletion date: 14 days from now
-            const deleteDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
-            const firestoreTimestamp = firebase.firestore.Timestamp.fromDate(deleteDate);
+            const soldAt = firebase.firestore.Timestamp.now();
+            const publicVisibleUntil = firebase.firestore.Timestamp.fromMillis(
+                soldAt.toMillis() + 48 * 60 * 60 * 1000
+            );
 
             const adRef = db.collection("listings").doc(adId);
 
             try {
-                await adRef.update({
+                const updateData = {
                     status: 'sold',
-                    deleteAt: firestoreTimestamp
-                });
+                    soldAt,
+                    publicVisibleUntil,
+                };
+                if (firebase.firestore.FieldValue) {
+                    updateData.deleteAt = firebase.firestore.FieldValue.delete();
+                }
+                await adRef.update(updateData);
 
-                console.log(`Ad ${adId} marked as sold. Scheduled for deletion on ${deleteDate.toISOString()}`);
+                console.log(`Ad ${adId} marked as sold. Public visibility until ${publicVisibleUntil.toDate().toISOString()}`);
 
                 // --- Update the UI without reloading ---
                 const adElement = document.querySelector(`.ad-item[data-id="${adId}"]`);
@@ -666,7 +974,8 @@
 
             if (!confirmRemove || !auth.currentUser || !db) return;
 
-            const favRef = db.collection("users").doc(auth.currentUser.uid).collection("favorites").doc(listingId);
+            const docId = safeFavDocId(listingId);
+            const favRef = db.collection("users").doc(auth.currentUser.uid).collection("favorites").doc(docId);
             try {
                 await favRef.delete();
                 console.log("Favorite removed:", listingId);
@@ -681,6 +990,24 @@
                 console.error("Error removing favorite:", error);
                 // We can't use alert, so we'll just log it.
                 console.error('Error removing favorite.');
+            }
+        }
+
+        async function loadReferralInfo() {
+            if (window.NunciaYaReferralUI) {
+                await NunciaYaReferralUI.loadInfo();
+                return;
+            }
+            if (!window.NunciaYaReferrals) return;
+            try {
+                const info = await NunciaYaReferrals.getMyReferralInfo();
+                const points = info.referralPoints || 0;
+                const count = info.referralCount || 0;
+                if (referralPointsDisplay) referralPointsDisplay.textContent = String(points);
+                if (referralCountDisplay) referralCountDisplay.textContent = String(count);
+                if (referralCountDisplayEs) referralCountDisplayEs.textContent = String(count);
+            } catch (err) {
+                console.warn('Could not load referral info:', err);
             }
         }
 
@@ -730,8 +1057,13 @@
                                 await loadUserProfile(user);
                                 await loadUserAds(user);
                                 await loadUserFavorites(user); // --- NEW ---
+                                await loadReferralInfo();
 
                                 if (window.setLang) window.setLang(currentLang);
+
+                                if (window.NunciaYaReferralUI) {
+                                    NunciaYaReferralUI.init({ triggers: ['#refer-friend-button'] });
+                                }
                             } else {
                                 console.log("No user signed in (onAuthStateChanged), redirecting to login.");
                                 localStorage.removeItem('nunciaya-user-session');
@@ -739,6 +1071,13 @@
                             }
                         });
                         logoutButton.addEventListener('click', handleLogout);
+                        contactSupportButton.addEventListener('click', openSupportModal);
+                        supportModalClose.addEventListener('click', closeSupportModal);
+                        supportCancelBtn.addEventListener('click', closeSupportModal);
+                        supportForm.addEventListener('submit', handleSupportSubmit);
+                        supportModal.addEventListener('click', (e) => {
+                            if (e.target === supportModal) closeSupportModal();
+                        });
                     } else {
                         throw new Error("Auth instance is null after wait loop");
                     }
@@ -757,6 +1096,7 @@
                 favoritesLoadingMsg.style.display = 'none'; // Hide this too
                 adsContainer.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error loading ads.</span><span class="lang-es">Error al cargar anuncios.</span></div>`;
                 favoritesContainer.innerHTML = `<div class="p-8 text-center text-red-600"><span class="lang-en">Error loading favorites.</span><span class="lang-es">Error al cargar favoritos.</span></div>`;
+                profileDisplayName.value = 'Error';
                 profileName.value = 'Error';
                 profileEmail.value = 'Error';
                 profilePhone.value = 'Error';

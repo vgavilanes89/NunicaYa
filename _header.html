@@ -1,24 +1,20 @@
-<header class="bg-white border-b border-gray-300 py-4">
-    <div class="container mx-auto px-4 max-w-6xl flex justify-between items-center">
-        <h1 class="text-3xl font-bold text-blue-700">
-            <!-- Added id="home-link" and set href to "#" -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<header class="site-header bg-white border-b border-gray-300 py-3 sm:py-4">
+    <div class="container mx-auto px-4 max-w-6xl flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+        <h1 class="text-2xl sm:text-3xl font-bold text-blue-700 shrink-0">
             <a href="#" id="home-link">NunciaYa</a>
         </h1>
 
-        <nav class="flex items-center">
-            <!-- Language Switcher -->
-            <span class="text-sm mr-6">
-                <!-- setLang() is now in app.js -->
+        <nav class="site-nav flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+            <span class="inline-flex items-center gap-1">
                 <a href="javascript:void(0);" onclick="setLang('en')" class="font-bold text-blue-700 hover:underline" id="lang-btn-en">English</a>
-                <span class="mx-1 text-gray-400">/</span>
+                <span class="text-gray-400">/</span>
                 <a href="javascript:void(0);" onclick="setLang('es')" class="text-gray-600 hover:underline" id="lang-btn-es">Español</a>
             </span>
-            <!-- Post-ad links with IDs -->
-            <a href="#" class="text-blue-700 hover:underline ml-4 lang-en" id="post-ad-link-en">post ad</a>
-            <a href="#" class="text-blue-700 hover:underline ml-4 lang-es" id="post-ad-link-es">publicar</a>
-            <!-- My-account links with IDs -->
-            <a href="#" class="text-blue-700 hover:underline ml-4 lang-en" id="my-account-link-en">my account</a>
-            <a href="#" class="text-blue-700 hover:underline ml-4 lang-es" id="my-account-link-es">mi cuenta</a>
+            <a href="#" class="text-blue-700 hover:underline lang-en" id="post-ad-link-en">post ad</a>
+            <a href="#" class="text-blue-700 hover:underline lang-es" id="post-ad-link-es">publicar</a>
+            <a href="#" class="text-blue-700 hover:underline lang-en" id="my-account-link-en">my account</a>
+            <a href="#" class="text-blue-700 hover:underline lang-es" id="my-account-link-es">mi cuenta</a>
         </nav>
     </div>
 </header>

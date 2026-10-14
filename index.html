@@ -26,20 +26,20 @@
         
         <!-- Page Title -->
          <!-- Changed to flex layout for robust centering --> 
-        <div class="flex flex-col items-center mb-8">
-            <h2 class="text-4xl font-bold lang-en">Costa Rica</h2>
-            <h2 class="text-4xl font-bold lang-es">Costa Rica</h2>
-            <p class="text-lg text-gray-600 lang-en">Local Classifieds</p>
-            <p class="text-lg text-gray-600 lang-es">Anuncios Clasificados</p>
+        <div class="flex flex-col items-center mb-6 sm:mb-8 px-1">
+            <h2 class="text-3xl sm:text-4xl font-bold lang-en">Costa Rica</h2>
+            <h2 class="text-3xl sm:text-4xl font-bold lang-es">Costa Rica</h2>
+            <p class="text-base sm:text-lg text-gray-600 lang-en">Local Classifieds</p>
+            <p class="text-base sm:text-lg text-gray-600 lang-es">Anuncios Clasificados</p>
         </div>
 
         <!-- Search Bar -->
-        <div class="mb-8">
+        <div class="mb-6 sm:mb-8">
             <!-- MODIFIED: Added id="search-form" -->
             <form id="search-form" class="flex w-full max-w-2xl mx-auto">
                 <!-- This placeholder will be set by the script below -->
-                <input type="text" placeholder="" class="flex-grow p-3 border border-gray-400 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="search-input">
-                <button type="submit" class="bg-blue-600 text-white p-3 rounded-r-md hover:bg-blue-700">
+                <input type="text" placeholder="" class="flex-grow min-w-0 p-3 border border-gray-400 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500" id="search-input">
+                <button type="submit" class="bg-blue-600 text-white px-4 sm:px-5 py-3 rounded-r-md hover:bg-blue-700 shrink-0">
                     <span class="lang-en">Search</span>
                     <span class="lang-es">Buscar</span>
                 </button>
@@ -47,7 +47,7 @@
         </div>
 
         <!-- Category Columns (Static content) -->
-        <div class="flex flex-wrap -mx-4">
+        <div class="flex flex-wrap mx-0 sm:-mx-4">
 
             <!-- Housing -->
             <div class="category-block">
@@ -57,6 +57,8 @@
                 </h3>
                 <ul class="subcategory-list">
                     <li><a href="./pages/housing/apartments.html" class="category-link"><span class="lang-en">apartments / housing</span><span class="lang-es">apartamentos / casas</span></a></li>
+                    <li><a href="./pages/housing/cabins.html" class="category-link"><span class="lang-en">cabins / cabinas</span><span class="lang-es">cabinas</span></a></li>
+                    <li><a href="./pages/housing/landFarms.html" class="category-link"><span class="lang-en">land & farms</span><span class="lang-es">fincas y terrenos</span></a></li>
                     <li><a href="./pages/housing/rentalsWanted.html" class="category-link"><span class="lang-en">rentals wanted</span><span class="lang-es">busco alquiler</span></a></li>
                     <li><a href="./pages/housing/roomsShared.html" class="category-link"><span class="lang-en">rooms / shared</span><span class="lang-es">cuartos / compartido</span></a></li>
                     <li><a href="./pages/housing/sublets.html" class="category-link"><span class="lang-en">sublets / temporary</span><span class="lang-es">subarriendo / temporal</span></a></li>
@@ -74,11 +76,19 @@
                 <ul class="subcategory-list">
                      <!-- Fixed paths --> 
                     <li><a href="./pages/For Sale/autoParts.html" class="category-link"><span class="lang-en">auto parts</span><span class="lang-es">repuestos</span></a></li>
+                    <li><a href="./pages/For Sale/babyKids.html" class="category-link"><span class="lang-en">baby & kids</span><span class="lang-es">bebés y niños</span></a></li>
+                    <li><a href="./pages/For Sale/boats.html" class="category-link"><span class="lang-en">boats & marine</span><span class="lang-es">botes y náutica</span></a></li>
+                    <li><a href="./pages/For Sale/booksMedia.html" class="category-link"><span class="lang-en">books & media</span><span class="lang-es">libros y medios</span></a></li>
                     <li><a href="./pages/For Sale/carsTrucks.html" class="category-link"><span class="lang-en">cars & trucks</span><span class="lang-es">carros y camiones</span></a></li>
-                    <li><a href="./pages/For Sale/electonics.html" class="category-link"><span class="lang-en">electronics</span><span class="lang-es">electrónicos</span></a></li>
+                    <li><a href="./pages/For Sale/clothes.html" class="category-link"><span class="lang-en">clothes & accessories</span><span class="lang-es">ropa y accesorios</span></a></li>
+                    <li><a href="./pages/For Sale/electronics.html" class="category-link"><span class="lang-en">electronics</span><span class="lang-es">electrónicos</span></a></li>
+                    <li><a href="./pages/For Sale/farmProduce.html" class="category-link"><span class="lang-en">farm & produce</span><span class="lang-es">productos de finca</span></a></li>
                     <li><a href="./pages/For Sale/furniture.html" class="category-link"><span class="lang-en">furniture</span><span class="lang-es">muebles</span></a></li>
                     <li><a href="./pages/For Sale/household.html" class="category-link"><span class="lang-en">household</span><span class="lang-es">artículos del hogar</span></a></li>
                     <li><a href="./pages/For Sale/motorcycles.html" class="category-link"><span class="lang-en">motorcycles</span><span class="lang-es">motocicletas</span></a></li>
+                    <li><a href="./pages/For Sale/pets.html" class="category-link"><span class="lang-en">pets</span><span class="lang-es">mascotas</span></a></li>
+                    <li><a href="./pages/For Sale/sportingGoods.html" class="category-link"><span class="lang-en">sporting goods</span><span class="lang-es">artículos deportivos</span></a></li>
+                    <li><a href="./pages/For Sale/toolsGarden.html" class="category-link"><span class="lang-en">tools & garden</span><span class="lang-es">herramientas y jardín</span></a></li>
                     <li><a href="./pages/For Sale/free.html" class="category-link"><span class="lang-en">free</span><span class="lang-es">gratis</span></a></li>
                 </ul>
             </div>
@@ -92,12 +102,16 @@
                 <ul class="subcategory-list">
                      <!-- Fixed paths --> 
                     <li><a href="./pages/Jobs/adminOffice.html" class="category-link"><span class="lang-en">admin / office</span><span class="lang-es">admin / oficina</span></a></li>
+                    <li><a href="./pages/Jobs/agriculture.html" class="category-link"><span class="lang-en">agriculture / farming</span><span class="lang-es">agricultura</span></a></li>
+                    <li><a href="./pages/Jobs/construction.html" class="category-link"><span class="lang-en">construction</span><span class="lang-es">construcción</span></a></li>
                     <li><a href="./pages/Jobs/customerService.html" class="category-link"><span class="lang-en">customer service</span><span class="lang-es">servicio al cliente</span></a></li>
+                    <li><a href="./pages/Jobs/education.html" class="category-link"><span class="lang-en">education / teaching</span><span class="lang-es">educación / docencia</span></a></li>
+                    <li><a href="./pages/Jobs/generalLabor.html" class="category-link"><span class="lang-en">general labor</span><span class="lang-es">trabajo general</span></a></li>
+                    <li><a href="./pages/Jobs/healthcare.html" class="category-link"><span class="lang-en">healthcare / medical</span><span class="lang-es">salud / medicina</span></a></li>
                     <li><a href="./pages/Jobs/hospitalityHotel.html" class="category-link"><span class="lang-en">hospitality / hotel</span><span class="lang-es">hotelería / hospitalidad</span></a></li>
                     <li><a href="./pages/Jobs/salesMarketing.html" class="category-link"><span class="lang-en">sales / marketing</span><span class="lang-es">ventas / mercadeo</span></a></li>
                     <li><a href="./pages/Jobs/softwareIT.html" class="category-link"><span class="lang-en">software / IT</span><span class="lang-es">software / TI</span></a></li>
                     <li><a href="./pages/Jobs/tourism.html" class="category-link"><span class="lang-en">tourism</span><span class="lang-es">turismo</span></a></li>
-                    <li><a href="./pages/Jobs/generalLabor.html" class="category-link"><span class="lang-es">trabajo general</span><span class="lang-en">general labor</span></a></li>
                 </ul>
             </div>
 
@@ -110,12 +124,19 @@
                 <ul class="subcategory-list">
                      <!-- Fixed paths --> 
                     <li><a href="./pages/Services/automotive.html" class="category-link"><span class="lang-en">automotive</span><span class="lang-es">automotriz</span></a></li>
+                    <li><a href="./pages/Services/beauty.html" class="category-link"><span class="lang-en">beauty & personal care</span><span class="lang-es">belleza y cuidado personal</span></a></li>
+                    <li><a href="./pages/Services/cleaningMoving.html" class="category-link"><span class="lang-en">cleaning & moving</span><span class="lang-es">limpieza y mudanzas</span></a></li>
                     <li><a href="./pages/Services/computer.html" class="category-link"><span class="lang-en">computer</span><span class="lang-es">computación</span></a></li>
                     <li><a href="./pages/Services/financial.html" class="category-link"><span class="lang-en">financial</span><span class="lang-es">financiero</span></a></li>
                     <li><a href="./pages/Services/legal.html" class="category-link"><span class="lang-en">legal</span><span class="lang-es">legal</span></a></li>
                     <li><a href="./pages/Services/lessons.html" class="category-link"><span class="lang-en">lessons & tutoring</span><span class="lang-es">lecciones & tutorías</span></a></li>
+                    <li><a href="./pages/Services/petCare.html" class="category-link"><span class="lang-en">pet care</span><span class="lang-es">cuidado de mascotas</span></a></li>
+                    <li><a href="./pages/Services/photography.html" class="category-link"><span class="lang-en">photography & video</span><span class="lang-es">fotografía y video</span></a></li>
+                    <li><a href="./pages/Services/propertyCare.html" class="category-link"><span class="lang-en">vacation property care</span><span class="lang-es">cuidado de propiedades</span></a></li>
                     <li><a href="./pages/Services/realEstate.html" class="category-link"><span class="lang-en">real estate</span><span class="lang-es">bienes raíces</span></a></li>
                     <li><a href="./pages/Services/skilledTrade.html" class="category-link"><span class="lang-en">skilled trade</span><span class="lang-es">oficios</span></a></li>
+                    <li><a href="./pages/Services/toursGuides.html" class="category-link"><span class="lang-en">tours & guides</span><span class="lang-es">tours y guías</span></a></li>
+                    <li><a href="./pages/Services/transportTransfers.html" class="category-link"><span class="lang-en">transport & transfers</span><span class="lang-es">transporte y traslados</span></a></li>
                 </ul>
             </div>
 
@@ -129,6 +150,7 @@
                      <!-- Fixed paths --> 
                     <li><a href="./pages/Community/activities.html" class="category-link"><span class="lang-en">activities</span><span class="lang-es">actividades</span></a></li>
                     <li><a href="./pages/Community/classes.html" class="category-link"><span class="lang-en">classes</span><span class="lang-es">clases</span></a></li>
+                    <li><a href="./pages/Community/conservation.html" class="category-link"><span class="lang-en">conservation & eco</span><span class="lang-es">conservación y eco</span></a></li>
                     <li><a href="./pages/Community/events.html" class="category-link"><span class="lang-en">events</span><span class="lang-es">eventos</span></a></li>
                     <li><a href="./pages/Community/localNews.html" class="category-link"><span class="lang-en">local news</span><span class="lang-es">noticias locales</span></a></li>
                     <li><a href="./pages/Community/lostFound.html" class="category-link"><span class="lang-en">lost & found</span><span class="lang-es">perdidos y encontrados</span></a></li>
@@ -161,8 +183,11 @@
         <!-- Reusable footer will be loaded here by app.js -->
     </div>
     
+    <!-- Configuration (must be loaded before app.js) -->
+    <script src="config.js"></script>
     <!-- Main Application Script -->
     <script src="app.js"></script>
+    <script src="js/referrals.js"></script>
 
     <!-- Page-Specific Script -->
     <script>
@@ -176,7 +201,7 @@
         };
         
         // 2. Set the default language for this page
-        let currentLang = 'es';
+        let currentLang = window.getPreferredLang ? window.getPreferredLang() : 'es';
 
         // 3. Re-assign the global setLang function
         // This is so we can pass our page-specific text to the global function

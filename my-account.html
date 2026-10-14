@@ -34,16 +34,22 @@
                     <span class="lang-es">Bienvenido/a,</span>
                     <strong id="user-email-display"></strong>.
                 </p>
-                <!-- NEW: Manage Listings Button -->
-                <a href="profile.html" id="manage-listings-btn" class="mb-4 w-full text-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 block">
-                    <span class="lang-en">Manage My Ads</span>
-                    <span class="lang-es">Gestionar Mis Anuncios</span>
+                <a href="profile.html" id="profile-btn" class="mb-4 w-full text-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 block">
+                    <span class="lang-en">My Profile</span>
+                    <span class="lang-es">Mi Perfil</span>
                 </a>
-                <!-- NEW: Manage Favorites Button -->
-                <a href="profile.html" id="manage-favorites-btn" class="mb-4 w-full text-center px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 block">
-                    <span class="lang-en">My Favorites</span>
-                    <span class="lang-es">Mis Favoritos</span>
+                <a href="post-ad.html" id="post-ad-btn" class="mb-4 w-full text-center px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 block">
+                    <span class="lang-en">Post Ad</span>
+                    <span class="lang-es">Publicar Anuncio</span>
                 </a>
+                <button type="button" id="refer-friend-account-btn" class="mb-4 w-full text-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 block">
+                    <span class="lang-en">Refer a Friend</span>
+                    <span class="lang-es">Referir a un Amigo</span>
+                </button>
+                <p class="text-xs text-gray-500 mb-4 text-center">
+                    <span class="lang-en"><span id="account-referral-points">0</span> referral points</span>
+                    <span class="lang-es"><span id="account-referral-points-es">0</span> puntos por referidos</span>
+                </p>
                 <button id="logout-button" class="w-full text-left text-sm text-red-600 hover:underline">
                     <span class="lang-en">Log Out</span>
                     <span class="lang-es">Cerrar Sesión</span>
@@ -107,6 +113,11 @@
 
                 <!-- Sign Up Form -->
                 <form id="signup-form" class="space-y-4" style="display: none;">
+
+                    <div id="referral-invite-banner" class="hidden p-3 rounded-md bg-green-50 border border-green-200 text-sm text-green-800">
+                        <span class="lang-en">🎉 A friend invited you! Create your account and they'll earn a referral point.</span>
+                        <span class="lang-es">🎉 ¡Un amigo le invitó! Cree su cuenta y ellos ganarán un punto por referido.</span>
+                    </div>
                     
                     <!-- NEW: Display Name -->
                     <div>
@@ -186,8 +197,12 @@
     <!-- Footer Placeholder -->
     <div id="footer-placeholder"></div>
 
-    <!-- Main Application Script -->
+    <!-- Configuration & scripts -->
+    <script src="config.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     <script src="app.js"></script>
+    <script src="js/referrals.js?v=2"></script>
+    <script src="js/referral-ui.js?v=2"></script>
 
     <!-- Page-Specific Script -->
     <script>
@@ -214,8 +229,12 @@
         
         const signupPasswordInput = document.getElementById('signup-password');
         const signupPasswordConfirmInput = document.getElementById('signup-password-confirm');
+        const referFriendAccountBtn = document.getElementById('refer-friend-account-btn');
+        const accountReferralPoints = document.getElementById('account-referral-points');
+        const accountReferralPointsEs = document.getElementById('account-referral-points-es');
+        const referralInviteBanner = document.getElementById('referral-invite-banner');
         
-        let currentLang = 'es';
+        let currentLang = window.getPreferredLang ? window.getPreferredLang() : 'es';
         let db;
         let auth;
         
@@ -270,13 +289,33 @@
         signupTabBtn.addEventListener('click', () => {
             loginForm.style.display = 'none';
             signupForm.style.display = 'block';
+            updateReferralInviteBanner();
             window.setLang(currentLang); // Update tab styles
         });
+
+        function updateReferralInviteBanner() {
+            if (!referralInviteBanner || !window.NunciaYaReferrals) return;
+            const hasRef = !!NunciaYaReferrals.getStoredReferralCode();
+            referralInviteBanner.classList.toggle('hidden', !hasRef);
+        }
+
+        async function loadAccountReferralPoints() {
+            if (!window.NunciaYaReferrals) return;
+            try {
+                const info = await NunciaYaReferrals.getMyReferralInfo();
+                const pts = String(info.referralPoints || 0);
+                if (accountReferralPoints) accountReferralPoints.textContent = pts;
+                if (accountReferralPointsEs) accountReferralPointsEs.textContent = pts;
+            } catch (e) {
+                console.warn('Referral stats unavailable:', e);
+            }
+        }
         
         function displayMessage(area, code, type = 'error') {
             const messages = {
                 en: {
                     'auth/invalid-email': 'Please enter a valid email address.',
+                    'auth/invalid-credential': 'Invalid email or password. Please try again.',
                     'auth/user-not-found': 'No account found with this email.',
                     'auth/wrong-password': 'Incorrect password. Please try again.',
                     'auth/email-already-in-use': 'This email is already in use by another account.',
@@ -293,6 +332,7 @@
                 },
                 es: {
                     'auth/invalid-email': 'Por favor ingrese un correo válido.',
+                    'auth/invalid-credential': 'Correo o contraseña incorrectos. Por favor intente de nuevo.',
                     'auth/user-not-found': 'No se encontró cuenta con este correo.',
                     'auth/wrong-password': 'Contraseña incorrecta. Intente de nuevo.',
                     'auth/email-already-in-use': 'Este correo ya está en uso por otra cuenta.',
@@ -380,6 +420,17 @@
                      fullName: fullName, // NEW
                      phone: phone // NEW
                  });
+
+                if (window.NunciaYaReferrals) {
+                    try {
+                        const refResult = await NunciaYaReferrals.completeReferralSignup();
+                        if (refResult && refResult.attributed) {
+                            console.log('Referral attributed to:', refResult.referrerUid);
+                        }
+                    } catch (refErr) {
+                        console.warn('Referral attribution failed:', refErr);
+                    }
+                }
 
                 displayMessage(signupMessageArea, 'signup-success', 'success');
                 signupForm.reset();
@@ -509,6 +560,10 @@
                     signupForm.addEventListener('submit', handleSignUp);
                     logoutButton.addEventListener('click', handleLogout);
                     forgotPasswordBtn.addEventListener('click', handleForgotPassword);
+                    if (window.NunciaYaReferralUI) {
+                        NunciaYaReferralUI.init({ triggers: ['#refer-friend-account-btn'] });
+                    }
+                    updateReferralInviteBanner();
 
                     // 4. Run session logic (from app.js) AFTER assigning auth
                     if (headerLoaded && window.runSessionLogic) {
@@ -530,6 +585,8 @@
                             localStorage.setItem('nunciaya-user-session', JSON.stringify(sessionData));
                             
                             showView('account');
+                            loadAccountReferralPoints();
+                            updateReferralInviteBanner();
                             
                             // If user was redirected to login, send them back
                             if (redirectUrl && redirectUrl !== 'my-account.html') {

@@ -143,7 +143,7 @@
         const formMessageArea = document.getElementById('form-message-area');
 
         // 2. Page State
-        let currentLang = 'es';
+        let currentLang = window.getPreferredLang ? window.getPreferredLang() : 'es';
         let db;
         let auth;
         let currentUserData = null; // Store user's profile data

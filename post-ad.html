@@ -13,15 +13,17 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script> <!-- Storage SDK -->
-    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+    <script src="config.js?v=3"></script>
+    <script src="js/payments.js?v=4"></script>
+
     <!-- 
     ============================================================
     === NEW: CarQuery API scripts                          ===
     ============================================================
     -->
-    <script type="text/javascript" src="https://www.carqueryapi.com/js/jquery.min.js"></script>
-    <script type="text/javascript" src="https://www.carqueryapi.com/js/carquery.0.3.4.js"></script>
+    <script src="./js/vehicle-filters.js"></script>
     
     <!-- 
     ============================================================
@@ -29,6 +31,10 @@
     ============================================================
     -->
     <script src="locations-cr.js" defer></script>
+    <script src="js/location-coords-cr.js" defer></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer crossorigin=""></script>
+    <script src="js/radius-map.js" defer></script>
     
     <style>
         /* Add styles for required labels */
@@ -84,6 +90,13 @@
         #drop-zone.dragover {
              border-color: #2563EB; /* blue-600 */
              background-color: #EFF6FF; /* blue-50 */
+        }
+        #post-ad-radius-map {
+            height: 14rem;
+            min-height: 14rem;
+        }
+        .radius-slider {
+            accent-color: #2563eb;
         }
     </style>
 
@@ -158,6 +171,29 @@
                  </select>
             </div>
 
+            <!-- Service area map (services category only) -->
+            <div id="service-radius-section" class="md:col-span-2 hidden border border-gray-200 rounded-md p-4 bg-gray-50">
+                <h3 class="text-sm font-semibold text-gray-800 mb-2">
+                    <span class="lang-en">Service area</span>
+                    <span class="lang-es">Área de servicio</span>
+                </h3>
+                <p class="text-xs text-gray-500 mb-3">
+                    <span class="lang-en">Drag the pin to your base location. The circle shows how far you travel for jobs.</span>
+                    <span class="lang-es">Arrastre el pin a su ubicación base. El círculo muestra qué tan lejos viaja para trabajos.</span>
+                </p>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <label for="service-radius-km" class="text-sm font-medium text-gray-700">
+                        <span class="lang-en">Radius</span>
+                        <span class="lang-es">Radio</span>
+                    </label>
+                    <span id="service-radius-label" class="text-sm font-semibold text-blue-700">15 km</span>
+                </div>
+                <input type="range" id="service-radius-km" name="serviceRadiusKm" class="radius-slider w-full mb-3" min="1" max="100" value="15" step="1">
+                <div id="post-ad-radius-map" class="w-full rounded-md border border-gray-300 overflow-hidden bg-gray-100"></div>
+                <input type="hidden" id="location-lat" name="locationLat" value="">
+                <input type="hidden" id="location-lng" name="locationLng" value="">
+            </div>
+
 
              <!-- Dynamic Filters Placeholder --> 
             <div id="dynamic-filters-container" class="space-y-4 border-t border-gray-200 pt-4 mt-4" style="display: none;">
@@ -215,9 +251,13 @@
              <!-- Image Upload Section with Drop Zone --> 
             <div class="border-t border-gray-200 pt-4">
                 <label class="block text-sm font-medium text-gray-700">
-                    <span class="lang-en">Images (Optional, up to 5)</span>
-                    <span class="lang-es">Imágenes (Opcional, hasta 5)</span>
+                    <span class="lang-en" id="images-label-en">Images (Optional, up to 5)</span>
+                    <span class="lang-es" id="images-label-es">Imágenes (Opcional, hasta 5)</span>
                 </label>
+                <p class="mt-2 mb-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                    <span class="lang-en">The first 2 images are free. To add images 3–5, you must pay a one-time $2 fee for this ad.</span>
+                    <span class="lang-es">Las primeras 2 imágenes son gratis. Para añadir imágenes 3–5, debe pagar una tarifa única de $2 por este anuncio.</span>
+                </p>
                  <!-- Drop Zone Area --> 
                 <div id="drop-zone" class="mt-1 flex flex-col items-center">
                      <p class="text-gray-500 text-sm mb-2">
@@ -321,14 +361,63 @@
         </form>
     </main>
 
+    <!-- Paywall Modals -->
+    <div id="paywall-modal-backdrop" class="fixed inset-0 bg-black/50 z-40 hidden" aria-hidden="true"></div>
+    <div id="paywall-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none hidden" aria-hidden="true">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6 pointer-events-auto" role="dialog" aria-labelledby="paywall-title" aria-modal="true">
+            <h3 id="paywall-title" class="text-lg font-semibold text-gray-900 mb-2"></h3>
+            <p id="paywall-message" class="text-gray-600 text-sm mb-4"></p>
+            <div class="mb-4 border-t border-gray-200 pt-4">
+                <label for="paywall-promo-input" class="block text-sm font-medium text-gray-700 mb-1">
+                    <span class="lang-en">Discount code</span><span class="lang-es">Código de descuento</span>
+                </label>
+                <div class="flex gap-2">
+                    <input type="text" id="paywall-promo-input" autocomplete="off" placeholder="Code"
+                        class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm uppercase" />
+                    <button type="button" id="paywall-promo-apply"
+                        class="px-3 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 whitespace-nowrap">
+                        <span class="lang-en">Apply</span><span class="lang-es">Aplicar</span>
+                    </button>
+                </div>
+                <p id="paywall-promo-hint" class="text-xs text-gray-500 mt-1"></p>
+                <p id="paywall-promo-feedback" class="text-sm mt-2 hidden"></p>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button type="button" id="paywall-cancel" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                    <span class="lang-en">Cancel</span><span class="lang-es">Cancelar</span>
+                </button>
+                <button type="button" id="paywall-confirm" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    <span id="paywall-confirm-text-en" class="lang-en"></span>
+                    <span id="paywall-confirm-text-es" class="lang-es"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer Placeholder -->
     <div id="footer-placeholder"></div>
 
-    <!-- Main Application Script -->
-    <script src="app.js"></script>
+    <!-- Main Application Script (config + payments load in head) -->
+    <script src="app.js?v=3"></script>
 
     <!-- Page-Specific Script -->
     <script>
+        // Load payments/promo helpers synchronously if a cached page omitted the script tag
+        (function loadPaymentsInline() {
+            if (window.NunciaYaPayments) return;
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', 'js/payments.js?v=4', false);
+                xhr.send(null);
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
+                    // eslint-disable-next-line no-new-func
+                    (new Function(xhr.responseText))();
+                }
+            } catch (err) {
+                console.error('[NunciaYa] payments.js inline load failed:', err);
+            }
+        })();
+
         // --- 1. Page Elements & State ---
         const pageTitle = document.getElementById('page-title');
         const categorySelect = document.getElementById('category');
@@ -353,9 +442,16 @@
         const prefPhone = document.getElementById('pref-phone');
         const prefWhatsApp = document.getElementById('pref-whatsapp');
         const prefEmail = document.getElementById('pref-email');
+        const serviceRadiusSection = document.getElementById('service-radius-section');
+        const serviceRadiusInput = document.getElementById('service-radius-km');
+        const serviceRadiusLabel = document.getElementById('service-radius-label');
+        const locationLatInput = document.getElementById('location-lat');
+        const locationLngInput = document.getElementById('location-lng');
+        let postAdRadiusMapReady = false;
+        let postAdMapCenter = null;
 
 
-        let currentLang = 'es';
+        let currentLang = window.getPreferredLang ? window.getPreferredLang() : 'es';
         let db;
         let auth;
         let storage;
@@ -366,6 +462,163 @@
         let existingImageUrls = []; // For images already on the ad
         let editListingData = null; // Store the original ad data
 
+        // Paywall state (2 free photos; up to 5 after paid upgrade)
+        const FREE_IMAGE_LIMIT = (window.config && window.config.app && window.config.app.freeImageLimit) || 2;
+        const MAX_IMAGES_PAID = (window.config && window.config.app && window.config.app.maxImagesPerListing) || 5;
+        // These flags only drive the UI; the createListing Cloud Function and firestore.rules
+        // enforce payment. New ads: set from getMyEntitlements (unused paid records).
+        // Edit mode: extraImagesUnlocked mirrors the listing's server-set extraImagesPaid flag.
+        let realEstatePaywallUnlocked = false;
+        let extraImagesUnlocked = false;
+        let editImageAllowance = 0; // photos an edited listing already had (legacy listings may keep them)
+        let pendingSubmitAfterPaywall = false;
+        let appliedPromo = null;
+
+        function getProductPriceCents(productType) {
+            const products = (window.config && window.config.payments && window.config.payments.products) || {};
+            const p = products[productType];
+            return p ? Math.round((p.priceUsd || 0) * 100) : 0;
+        }
+
+        function formatUsdFromCents(cents) {
+            const dollars = cents / 100;
+            return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`;
+        }
+
+        function paywallProductType(type) {
+            return type === 'realestate' ? 'housing_listing' : type;
+        }
+
+        function paywallProductLabel(productType, lang) {
+            if (productType === 'housing_listing') {
+                return lang === 'es' ? 'tarifa de anuncio de vivienda' : 'housing listing fee';
+            }
+            if (productType === 'extra_images') {
+                return lang === 'es' ? 'fotos adicionales' : 'extra photos';
+            }
+            return lang === 'es' ? 'este anuncio' : 'this listing';
+        }
+
+        function getPromoFailureFeedback(reason, productType, lang) {
+            const fee = paywallProductLabel(productType, lang);
+            const messages = {
+                en: {
+                    invalid: 'That code was not found. Check the spelling and try again.',
+                    wrong_product: `This code does not apply to ${fee}. Housing codes (HOUSING50, HOUSING25) only work on the housing fee. Photo codes (PHOTOS50) only work when adding extra photos. NUNCIAFREE / NUNCIAFREEALL work for both.`,
+                    already_used: 'You have already used this code for this type of fee.',
+                    expired: 'This code has expired.',
+                    max_uses: 'This code has reached its maximum number of uses.',
+                },
+                es: {
+                    invalid: 'No se encontró ese código. Verifique la ortografía e intente de nuevo.',
+                    wrong_product: `Este código no aplica a ${fee}. Los códigos de vivienda (HOUSING50, HOUSING25) solo funcionan en la tarifa de vivienda. PHOTOS50 solo al añadir fotos. NUNCIAFREE / NUNCIAFREEALL funcionan para ambos.`,
+                    already_used: 'Ya utilizó este código para este tipo de tarifa.',
+                    expired: 'Este código ha expirado.',
+                    max_uses: 'Este código alcanzó su límite de usos.',
+                },
+            };
+            const dict = lang === 'es' ? messages.es : messages.en;
+            return dict[reason] || dict.invalid;
+        }
+
+        function updatePaywallPromoHint(type) {
+            const hint = document.getElementById('paywall-promo-hint');
+            if (!hint) return;
+            const productType = paywallProductType(type);
+            const lang = currentLang || 'es';
+            const fee = paywallProductLabel(productType, lang);
+            hint.textContent = lang === 'es'
+                ? `El código debe aplicar a: ${fee}`
+                : `Code must apply to: ${fee}`;
+        }
+
+        function resetPaywallPromoUi() {
+            appliedPromo = null;
+            const input = document.getElementById('paywall-promo-input');
+            const feedback = document.getElementById('paywall-promo-feedback');
+            if (input) {
+                input.value = '';
+                const lang = currentLang || 'es';
+                input.placeholder = lang === 'es' ? 'Código' : 'Code';
+            }
+            if (feedback) {
+                feedback.textContent = '';
+                feedback.classList.add('hidden');
+                feedback.classList.remove('text-green-600', 'text-red-600');
+            }
+        }
+
+        function setPaywallPromoFeedback(message, isError) {
+            const feedback = document.getElementById('paywall-promo-feedback');
+            if (!feedback) return;
+            feedback.textContent = message;
+            feedback.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            feedback.classList.add(isError ? 'text-red-600' : 'text-green-600');
+        }
+
+        function updatePaywallConfirmButton(type) {
+            const content = paywallContent[type];
+            if (!content) return;
+            const confirmEn = document.getElementById('paywall-confirm-text-en');
+            const confirmEs = document.getElementById('paywall-confirm-text-es');
+            if (!appliedPromo || !appliedPromo.valid) {
+                if (confirmEn) confirmEn.textContent = content.confirmEn;
+                if (confirmEs) confirmEs.textContent = content.confirmEs;
+                return;
+            }
+            if (appliedPromo.free) {
+                if (confirmEn) confirmEn.textContent = 'Redeem free & continue';
+                if (confirmEs) confirmEs.textContent = 'Canjear gratis y continuar';
+                return;
+            }
+            const price = formatUsdFromCents(appliedPromo.finalAmountCents);
+            if (confirmEn) confirmEn.textContent = `Pay ${price} & continue`;
+            if (confirmEs) confirmEs.textContent = `Pagar ${price} y continuar`;
+        }
+
+        async function grantEntitlementForProduct(productType, paymentId) {
+            if (!window.NunciaYaPayments) return;
+            NunciaYaPayments.saveEntitlement(productType, paymentId);
+            if (productType === 'housing_listing') {
+                realEstatePaywallUnlocked = true;
+            } else if (productType === 'extra_images') {
+                await unlockExtraImagesForEditedListing();
+                extraImagesUnlocked = true;
+                updateImageLimitLabel();
+            }
+        }
+
+        // In edit mode an extra-photos payment is spent on the existing listing right away.
+        async function unlockExtraImagesForEditedListing() {
+            if (!editMode || !editAdId) return;
+            await NunciaYaPayments.applyExtraImagesToListing(editAdId);
+            if (editListingData) editListingData.extraImagesPaid = true;
+        }
+
+        function buildPaywallContentFromConfig() {
+            const products = (window.config && window.config.payments && window.config.payments.products) || {};
+            return {
+                realestate: products.housing_listing ? {
+                    titleEn: products.housing_listing.titleEn,
+                    titleEs: products.housing_listing.titleEs,
+                    messageEn: products.housing_listing.messageEn,
+                    messageEs: products.housing_listing.messageEs,
+                    confirmEn: products.housing_listing.confirmEn,
+                    confirmEs: products.housing_listing.confirmEs,
+                } : null,
+                extra_images: products.extra_images ? {
+                    titleEn: products.extra_images.titleEn,
+                    titleEs: products.extra_images.titleEs,
+                    messageEn: products.extra_images.messageEn,
+                    messageEs: products.extra_images.messageEs,
+                    confirmEn: products.extra_images.confirmEn,
+                    confirmEs: products.extra_images.confirmEs,
+                } : null,
+            };
+        }
+
+        const paywallContent = buildPaywallContentFromConfig();
+
         const pageSpecificText = {
              'title_en': { en: 'Title (English)', es: 'Title (English)'},
              'title_es': { en: 'Título (Español)', es: 'Título (Español)'},
@@ -374,45 +627,314 @@
              'price': { en: '50000', es: '50000'}
         };
 
+        function getMaxImages() {
+            if (extraImagesUnlocked) return MAX_IMAGES_PAID;
+            return Math.min(MAX_IMAGES_PAID, Math.max(FREE_IMAGE_LIMIT, editMode ? editImageAllowance : 0));
+        }
+
+        function updateImageLimitLabel() {
+            const labelEn = document.getElementById('images-label-en');
+            const labelEs = document.getElementById('images-label-es');
+            if (labelEn) labelEn.textContent = `Images (Optional, up to ${MAX_IMAGES_PAID})`;
+            if (labelEs) labelEs.textContent = `Imágenes (Opcional, hasta ${MAX_IMAGES_PAID})`;
+        }
+
+        function showPaywallModal(type) {
+            const content = paywallContent[type];
+            if (!content) return;
+            resetPaywallPromoUi();
+            const backdrop = document.getElementById('paywall-modal-backdrop');
+            const modal = document.getElementById('paywall-modal');
+            const titleEl = document.getElementById('paywall-title');
+            const messageEl = document.getElementById('paywall-message');
+            const lang = currentLang || 'es';
+            titleEl.textContent = lang === 'es' ? content.titleEs : content.titleEn;
+            messageEl.textContent = lang === 'es' ? content.messageEs : content.messageEn;
+            updatePaywallConfirmButton(type);
+            updatePaywallPromoHint(type);
+            const confirmBtn = document.getElementById('paywall-confirm');
+            if (confirmBtn) confirmBtn.disabled = false;
+            backdrop.classList.remove('hidden');
+            modal.classList.remove('pointer-events-none', 'hidden');
+            const dialog = modal.querySelector('[role="dialog"]');
+            if (dialog) dialog.focus();
+            window._paywallType = type;
+        }
+
+        function closePaywallModal() {
+            const backdrop = document.getElementById('paywall-modal-backdrop');
+            const modal = document.getElementById('paywall-modal');
+            if (backdrop) backdrop.classList.add('hidden');
+            if (modal) {
+                modal.classList.add('pointer-events-none', 'hidden');
+            }
+            window._paywallType = null;
+            resetPaywallPromoUi();
+        }
+
+        async function ensurePaymentsReady() {
+            for (let i = 0; i < 30; i++) {
+                if (window.NunciaYaPayments) return true;
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+            return !!window.NunciaYaPayments;
+        }
+
+        async function applyPaywallPromoCode() {
+            const type = window._paywallType;
+            const productType = paywallProductType(type);
+            const input = document.getElementById('paywall-promo-input');
+            const code = input ? input.value.trim() : '';
+            const lang = currentLang || 'es';
+            if (!code) {
+                setPaywallPromoFeedback(lang === 'es' ? 'Ingrese un código.' : 'Enter a code.', true);
+                return;
+            }
+            if (!(await ensurePaymentsReady())) {
+                displayMessage('payment-not-configured', 'error');
+                return;
+            }
+            const promoUser = (auth && auth.currentUser)
+                || (window.firebaseAuthInstance && window.firebaseAuthInstance.currentUser);
+            if (!promoUser) {
+                displayMessage('promo-auth-required', 'error');
+                return;
+            }
+            const applyBtn = document.getElementById('paywall-promo-apply');
+            if (applyBtn) applyBtn.disabled = true;
+            try {
+                const originalAmountCents = getProductPriceCents(productType);
+                const result = await NunciaYaPayments.validatePromoCode(code, productType, originalAmountCents);
+                if (!result || !result.valid) {
+                    appliedPromo = null;
+                    updatePaywallConfirmButton(type);
+                    const reasonKey = result && result.reason ? result.reason : 'invalid';
+                    displayMessage('promo-' + reasonKey, 'error');
+                    setPaywallPromoFeedback(
+                        getPromoFailureFeedback(reasonKey, productType, lang),
+                        true,
+                    );
+                    return;
+                }
+                appliedPromo = result;
+                updatePaywallConfirmButton(type);
+                if (result.free) {
+                    setPaywallPromoFeedback(
+                        lang === 'es'
+                            ? `${result.discountPercent}% de descuento — gratis. Haga clic en continuar para canjear.`
+                            : `${result.discountPercent}% off — free. Click continue to redeem.`,
+                        false,
+                    );
+                } else {
+                    setPaywallPromoFeedback(
+                        lang === 'es'
+                            ? `${result.discountPercent}% de descuento — ${formatUsdFromCents(result.finalAmountCents)}`
+                            : `${result.discountPercent}% off — ${formatUsdFromCents(result.finalAmountCents)}`,
+                        false,
+                    );
+                }
+            } catch (err) {
+                console.error('Promo validation failed:', err);
+                appliedPromo = null;
+                updatePaywallConfirmButton(type);
+                const errCode = err && err.code ? String(err.code) : '';
+                if (errCode.includes('unauthenticated')) {
+                    displayMessage('promo-auth-required', 'error');
+                } else {
+                    displayMessage('promo-error', 'error');
+                }
+                setPaywallPromoFeedback(lang === 'es' ? 'No se pudo validar el código.' : 'Could not validate code.', true);
+            } finally {
+                if (applyBtn) applyBtn.disabled = false;
+            }
+        }
+
+        // Unlock the UI for products the user has paid for but not yet spent on an ad.
+        async function refreshPaymentEntitlements() {
+            if (editMode || !window.NunciaYaPayments) return;
+            try {
+                const ent = await NunciaYaPayments.getEntitlements();
+                if (ent.extra_images) extraImagesUnlocked = true;
+                if (ent.housing_listing) realEstatePaywallUnlocked = true;
+            } catch (err) {
+                console.error('Could not load payment entitlements:', err);
+            }
+            updateImageLimitLabel();
+        }
+
+        async function applyPaymentReturnResult(result) {
+            if (!result) return;
+            if (result.cancelled) {
+                displayMessage('payment-cancelled', 'error');
+                pendingSubmitAfterPaywall = false;
+                return;
+            }
+            if (result.paid && result.productType === 'extra_images') {
+                await unlockExtraImagesForEditedListing();
+                extraImagesUnlocked = true;
+                updateImageLimitLabel();
+                displayMessage('payment-extra-images-success', 'success');
+            }
+            if (result.paid && result.productType === 'housing_listing') {
+                realEstatePaywallUnlocked = true;
+                displayMessage('payment-housing-success', 'success');
+                if (pendingSubmitAfterPaywall) {
+                    pendingSubmitAfterPaywall = false;
+                    postAdForm.requestSubmit();
+                }
+            }
+        }
+
+        function setupPaywallModalListeners() {
+            const backdrop = document.getElementById('paywall-modal-backdrop');
+            const cancelBtn = document.getElementById('paywall-cancel');
+            const confirmBtn = document.getElementById('paywall-confirm');
+            const promoApplyBtn = document.getElementById('paywall-promo-apply');
+            const promoInput = document.getElementById('paywall-promo-input');
+            if (cancelBtn) cancelBtn.addEventListener('click', closePaywallModal);
+            if (backdrop) backdrop.addEventListener('click', closePaywallModal);
+            if (promoApplyBtn) promoApplyBtn.addEventListener('click', applyPaywallPromoCode);
+            if (promoInput) {
+                promoInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyPaywallPromoCode();
+                    }
+                });
+            }
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', async () => {
+                    const type = window._paywallType;
+                    const productType = paywallProductType(type);
+                    if (!productType || !(await ensurePaymentsReady())) {
+                        displayMessage('payment-not-configured', 'error');
+                        closePaywallModal();
+                        return;
+                    }
+                    const promoUser = (auth && auth.currentUser)
+                        || (window.firebaseAuthInstance && window.firebaseAuthInstance.currentUser);
+                    if (!promoUser) {
+                        displayMessage('promo-auth-required', 'error');
+                        closePaywallModal();
+                        return;
+                    }
+                    const needsStripe = !(appliedPromo && appliedPromo.valid && appliedPromo.free);
+                    if (needsStripe && !NunciaYaPayments.isConfigured()) {
+                        displayMessage('payment-not-configured', 'error');
+                        closePaywallModal();
+                        return;
+                    }
+                    const lang = currentLang || 'es';
+                    const loadingEn = appliedPromo && appliedPromo.free ? 'Redeeming code…' : 'Redirecting to payment…';
+                    const loadingEs = appliedPromo && appliedPromo.free ? 'Canjeando código…' : 'Redirigiendo al pago…';
+                    confirmBtn.disabled = true;
+                    const confirmEnEl = document.getElementById('paywall-confirm-text-en');
+                    const confirmEsEl = document.getElementById('paywall-confirm-text-es');
+                    if (confirmEnEl) confirmEnEl.textContent = loadingEn;
+                    if (confirmEsEl) confirmEsEl.textContent = loadingEs;
+                    try {
+                        const originalAmountCents = getProductPriceCents(productType);
+                        if (appliedPromo && appliedPromo.valid && appliedPromo.free) {
+                            const redeemed = await NunciaYaPayments.redeemPromoCode(
+                                appliedPromo.code,
+                                productType,
+                                originalAmountCents,
+                            );
+                            await grantEntitlementForProduct(productType, redeemed && redeemed.paymentId);
+                            closePaywallModal();
+                            if (productType === 'housing_listing') {
+                                displayMessage('promo-housing-success', 'success');
+                                if (pendingSubmitAfterPaywall) {
+                                    pendingSubmitAfterPaywall = false;
+                                    postAdForm.requestSubmit();
+                                }
+                            } else {
+                                displayMessage('promo-extra-images-success', 'success');
+                            }
+                            return;
+                        }
+                        const checkoutOpts = {};
+                        if (appliedPromo && appliedPromo.valid) checkoutOpts.promoCode = appliedPromo.code;
+                        if (editMode && editAdId) checkoutOpts.editId = editAdId;
+                        await NunciaYaPayments.startCheckout(productType, checkoutOpts);
+                    } catch (err) {
+                        console.error('Checkout/promo failed:', err);
+                        confirmBtn.disabled = false;
+                        updatePaywallConfirmButton(type);
+                        const errMsg = err && err.message ? String(err.message) : '';
+                        if (errMsg.includes('invalid') || errMsg.includes('expired') || errMsg.includes('already_used')) {
+                            displayMessage('promo-error', 'error');
+                        } else {
+                            displayMessage('payment-error', 'error');
+                        }
+                    }
+                });
+            }
+        }
+
         // --- 2. Category Data (NOW FULLY UPDATED) ---
         const categoryData = {
             housing: {
                 en: "Housing", es: "Vivienda", subCategories: {
                     apartments: { en: "Apartments / Housing", es: "Apartamentos / Casas", filters: [
-                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
-                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' }, 'other': { en: 'Other', es: 'Otro' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' }, 'other': { en: 'Other', es: 'Otro' } }}
+                    ] },
+                    cabins: { en: "Cabins / Cabinas", es: "Cabinas", filters: [
+                        { id: 'type', label: { en: 'Type', es: 'Tipo' }, type: 'select', options: {
+                            '': { en: 'Select Type', es: 'Seleccione Tipo' },
+                            'cabin': { en: 'Cabin', es: 'Cabina' },
+                            'eco_lodge': { en: 'Eco Lodge', es: 'Eco Lodge' },
+                            'treehouse': { en: 'Treehouse', es: 'Casa en Árbol' },
+                            'glamping': { en: 'Glamping', es: 'Glamping' },
+                            'bungalow': { en: 'Bungalow', es: 'Bungaló' },
+                            'other': { en: 'Other', es: 'Otro' }
+                        }},
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' }, 'other': { en: 'Other', es: 'Otro' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' }, 'other': { en: 'Other', es: 'Otro' } }}
+                    ] },
+                    landFarms: { en: "Land & Farms", es: "Fincas y Terrenos", filters: [
+                        { id: 'type', label: { en: 'Type', es: 'Tipo' }, type: 'select', options: {
+                            '': { en: 'Select Type', es: 'Seleccione Tipo' },
+                            'land': { en: 'Land / Lot', es: 'Terreno / Lote' },
+                            'farm': { en: 'Farm / Finca', es: 'Finca' },
+                            'plantation': { en: 'Plantation', es: 'Plantación' },
+                            'ocean_view': { en: 'Ocean View Land', es: 'Terreno Vista Mar' },
+                            'mountain': { en: 'Mountain Land', es: 'Terreno Montaña' },
+                            'other': { en: 'Other', es: 'Otro' }
+                        }}
                     ] },
                     rentalswanted: { en: "Rentals Wanted", es: "Busco Alquiler", filters: [
-                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
-                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' }, 'other': { en: 'Other', es: 'Otro' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' }, 'other': { en: 'Other', es: 'Otro' } }}
                     ] },
                     roomsShared: { en: "Rooms / Shared", es: "Cuartos / Compartido", filters: [] },
                     sublets: { en: "Sublets / Temporary", es: "Subarriendo / Temporal", filters: [
-                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
-                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' }, 'other': { en: 'Other', es: 'Otro' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' }, 'other': { en: 'Other', es: 'Otro' } }}
                     ] },
                     realEstate: { en: "Real Estate for Sale", es: "Bienes Raíces Venta", filters: [
-                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
-                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' }, 'other': { en: 'Other', es: 'Otro' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' }, 'other': { en: 'Other', es: 'Otro' } }}
                     ] },
                     vacationRentals: { en: "Vacation Rentals", es: "Alquileres Vacaciones", filters: [
-                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' } }},
-                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' } }}
+                        { id: 'rooms', label: { en: 'Rooms', es: 'Habitaciones' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '2': { en: '2', es: '2' }, '3': { en: '3', es: '3' }, '4': { en: '4', es: '4' }, '5+': { en: '5+', es: '5+' }, 'other': { en: 'Other', es: 'Otro' } }},
+                        { id: 'baths', label: { en: 'Baths', es: 'Baños' }, type: 'select', options: { '': { en: 'Any', es: 'Cualquiera' }, '1': { en: '1', es: '1' }, '1.5': { en: '1.5', es: '1.5' }, '2': { en: '2', es: '2' }, '2.5': { en: '2.5', es: '2.5' }, '3+': { en: '3+', es: '3+' }, 'other': { en: 'Other', es: 'Otro' } }}
                     ] },
                 }
             },
             forSale: {
                 en: "For Sale", es: "En Venta", subCategories: {
                     autoParts: { en: "Auto Parts", es: "Repuestos", filters: [
-                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } },
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } },
                         { type: 'carQueryGroup', carQueryBody: null } // This will render the 4 car dropdowns
                     ]},
                     carsTrucks: { en: "Cars & Trucks", es: "Carros y Camiones", filters: [
-                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } },
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } },
                         { type: 'carQueryGroup', carQueryBody: null } // This will render the 4 car dropdowns
                     ]},
                     electronics: { en: "Electronics", es: "Electrónicos", filters: [
-                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } },
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } },
                         { id: 'type', label: {en:'Type', es:'Tipo'}, type: 'select', options: { 
                             '': {en: 'Select Type', es: 'Seleccione Tipo'}, 
                             'cellphones': {en:'Cell Phones', es:'Celulares'}, 
@@ -425,15 +947,75 @@
                             'other': {en:'Other', es:'Otro'} 
                         } }
                     ]},
+                    clothes: { en: "Clothes & Accessories", es: "Ropa y Accesorios", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } },
+                        { id: 'type', label: {en:'Type', es:'Tipo'}, type: 'select', options: {
+                            '': {en: 'Select Type', es: 'Seleccione Tipo'},
+                            'men': {en:"Men's", es:'Hombre'},
+                            'women': {en:"Women's", es:'Mujer'},
+                            'kids': {en:"Kids'", es:'Niños'},
+                            'shoes': {en:'Shoes', es:'Zapatos'},
+                            'bags': {en:'Bags', es:'Bolsos'},
+                            'accessories': {en:'Accessories', es:'Accesorios'},
+                            'other': {en:'Other', es:'Otro'}
+                        } }
+                    ]},
+                    booksMedia: { en: "Books & Media", es: "Libros y Medios", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } }
+                    ]},
+                    babyKids: { en: "Baby & Kids", es: "Bebés y Niños", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } }
+                    ]},
+                    toolsGarden: { en: "Tools & Garden", es: "Herramientas y Jardín", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } }
+                    ]},
+                    boats: { en: "Boats & Marine", es: "Botes y Náutica", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } }
+                    ]},
+                    farmProduce: { en: "Farm & Produce", es: "Productos de Finca", filters: [
+                        { id: 'type', label: {en:'Type', es:'Tipo'}, type: 'select', options: {
+                            '': {en: 'Select Type', es: 'Seleccione Tipo'},
+                            'coffee': {en:'Coffee', es:'Café'},
+                            'fruit': {en:'Fruit & Vegetables', es:'Frutas y Verduras'},
+                            'honey': {en:'Honey & Bee Products', es:'Miel y Apicultura'},
+                            'plants': {en:'Plants & Nursery', es:'Plantas y Vivero'},
+                            'dairy': {en:'Dairy & Eggs', es:'Lácteos y Huevos'},
+                            'meat': {en:'Meat', es:'Carnes'},
+                            'other': {en:'Other', es:'Otro'}
+                        } }
+                    ]},
                     furniture: { en: "Furniture", es: "Muebles", filters: [
-                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } }
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } }
                     ]},
                     household: { en: "Household", es: "Artículos del Hogar", filters: [
-                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } }
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } }
                     ]},
                     motorcycles: { en: "Motorcycles", es: "Motocicletas", filters: [
-                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'} } },
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } },
                         { type: 'carQueryGroup', carQueryBody: 'Motorcycle' } // This renders car dropdowns for MOTOS
+                    ]},
+                    pets: { en: "Pets", es: "Mascotas", filters: [
+                        { id: 'type', label: {en:'Type', es:'Tipo'}, type: 'select', options: {
+                            '': {en: 'Select Type', es: 'Seleccione Tipo'},
+                            'dogs': {en:'Dogs', es:'Perros'},
+                            'cats': {en:'Cats', es:'Gatos'},
+                            'birds': {en:'Birds', es:'Aves'},
+                            'fish': {en:'Fish & Aquatics', es:'Peces y Acuáticos'},
+                            'farm': {en:'Farm Animals', es:'Animales de Granja'},
+                            'other': {en:'Other', es:'Otro'}
+                        } }
+                    ]},
+                    sportingGoods: { en: "Sporting Goods", es: "Artículos Deportivos", filters: [
+                        { id: 'condition', label: {en:'Condition', es:'Condición'}, type: 'select', options: { '': {en: 'Select Condition', es: 'Seleccione Condición'}, 'new': {en:'New', es:'Nuevo'}, 'used': {en:'Used', es:'Usado'}, 'other': {en:'Other', es:'Otro'} } },
+                        { id: 'type', label: {en:'Type', es:'Tipo'}, type: 'select', options: {
+                            '': {en: 'Select Type', es: 'Seleccione Tipo'},
+                            'bikes': {en:'Bikes', es:'Bicicletas'},
+                            'surf': {en:'Surf & Water Sports', es:'Surf y Deportes Acuáticos'},
+                            'fishing': {en:'Fishing', es:'Pesca'},
+                            'gym': {en:'Gym & Fitness', es:'Gimnasio y Fitness'},
+                            'camping': {en:'Camping & Hiking', es:'Camping y Senderismo'},
+                            'other': {en:'Other', es:'Otro'}
+                        } }
                     ]},
                     free: { en: "Free", es: "Gratis", filters: [] },
                 }
@@ -441,57 +1023,85 @@
             jobs: {
                 en: "Jobs", es: "Empleo", subCategories: {
                     adminOffice: { en: "Admin / Office", es: "Admin / Oficina", filters: [
-                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
-                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
-                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
                     ]},
                     customerService: { en: "Customer Service", es: "Servicio al Cliente", filters: [
-                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
-                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
-                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
                     ]},
                     hospitality: { en: "Hospitality / Hotel", es: "Hotelería / Hospitalidad", filters: [
-                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
-                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
-                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
                     ]},
                     salesMarketing: { en: "Sales / Marketing", es: "Ventas / Mercadeo", filters: [
-                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
-                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
-                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
                     ]},
                     softwareIT: { en: "Software / IT", es: "Software / TI", filters: [
-                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
-                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
-                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
                     ]},
                     tourism: { en: "Tourism", es: "Turismo", filters: [
-                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
-                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
-                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
                     ]},
                     generalLabor: { en: "General Labor", es: "Trabajo General", filters: [
-                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}}},
-                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}}},
-                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}}}
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
+                    ]},
+                    education: { en: "Education / Teaching", es: "Educación / Docencia", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
+                    ]},
+                    healthcare: { en: "Healthcare / Medical", es: "Salud / Medicina", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
+                    ]},
+                    construction: { en: "Construction", es: "Construcción", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
+                    ]},
+                    agriculture: { en: "Agriculture / Farming", es: "Agricultura", filters: [
+                         { id:'contractType', label: {en:'Contract Type', es:'Tipo Contrato'}, type:'select', options: {'':{en:'Select Contract', es:'Seleccione Contrato'}, 'full-time':{en:'Full-time', es:'Tiempo Completo'}, 'part-time':{en:'Part-time', es:'Medio Tiempo'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'experience', label: {en:'Experience', es:'Experiencia'}, type:'select', options: {'':{en:'Select Experience', es:'Seleccione Experiencia'}, 'entry':{en:'Entry-level', es:'Nivel Inicial'}, 'mid':{en:'Mid-level', es:'Nivel Medio'}, 'senior':{en:'Senior-level', es:'Nivel Senior'}, 'other':{en:'Other', es:'Otro'}}},
+                         { id:'employmentType', label: {en:'Employment Type', es:'Tipo Empleo'}, type:'select', options: {'':{en:'Select Type', es:'Seleccione Tipo'}, 'remote':{en:'Remote', es:'Teletrabajo'}, 'on-site':{en:'On-site', es:'Presencial'}, 'hybrid':{en:'Hybrid', es:'Híbrido'}, 'other':{en:'Other', es:'Otro'}}}
                     ]},
                 }
             },
              services: {
                  en: "Services", es: "Servicios", subCategories: {
                      automotive: { en: "Automotive", es: "Automotriz", filters: [] },
+                     beauty: { en: "Beauty & Personal Care", es: "Belleza y Cuidado Personal", filters: [] },
                      computer: { en: "Computer", es: "Computación", filters: [] },
                      financial: { en: "Financial", es: "Financiero", filters: [] },
                      legal: { en: "Legal", es: "Legal", filters: [] },
                      lessons: { en: "Lessons & Tutoring", es: "Lecciones & Tutorías", filters: [] },
+                     petCare: { en: "Pet Care", es: "Cuidado de Mascotas", filters: [] },
+                     photography: { en: "Photography & Video", es: "Fotografía y Video", filters: [] },
+                     propertyCare: { en: "Vacation Property Care", es: "Cuidado de Propiedades", filters: [] },
                      realestate_service: { en: "Real Estate", es: "Bienes Raíces", filters: [] }, // Note: Differentiated key
                      skilledtrade: { en: "Skilled Trade", es: "Oficios", filters: [] },
+                     cleaningMoving: { en: "Cleaning & Moving", es: "Limpieza y Mudanzas", filters: [] },
+                     toursGuides: { en: "Tours & Guides", es: "Tours y Guías", filters: [] },
+                     transportTransfers: { en: "Transport & Transfers", es: "Transporte y Traslados", filters: [] },
                  }
              },
              community: {
                  en: "Community", es: "Comunidad", subCategories: {
                      activities: { en: "Activities", es: "Actividades", filters: [] },
                      classes: { en: "Classes", es: "Clases", filters: [] },
+                     conservation: { en: "Conservation & Eco", es: "Conservación y Eco", filters: [] },
                      events: { en: "Events", es: "Eventos", filters: [] },
                      localnews: { en: "Local News", es: "Noticias Locales", filters: [] },
                      lostfound: { en: "Lost & Found", es: "Perdidos y Encontrados", filters: [] },
@@ -722,45 +1332,70 @@
             // Add the wrapper to the fragment
             fragment.appendChild(wrapper);
 
-            // --- NEW: Add the note underneath the wrapper ---
+            // --- Row 2: "Other" text inputs (shown when user selects "Other" in dropdowns) ---
+            const otherRow = document.createElement('div');
+            otherRow.id = 'carquery-other-row';
+            otherRow.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-3';
+            const otherLabels = {
+                year: { en: 'Year (if not in list)', es: 'Año (si no está en la lista)' },
+                make: { en: 'Make (if not in list)', es: 'Marca (si no está)' },
+                model: { en: 'Model (if not in list)', es: 'Modelo (si no está)' },
+                trim: { en: 'Trim (if not in list)', es: 'Versión (si no está)' }
+            };
+            carQueryIds.forEach(id => {
+                const div = document.createElement('div');
+                div.className = 'carquery-other-field';
+                div.style.display = 'none';
+                div.dataset.for = id;
+                const label = document.createElement('label');
+                label.htmlFor = `filter-${id}-other`;
+                label.className = 'block text-sm font-medium text-gray-600';
+                label.innerHTML = `<span class="lang-en">${otherLabels[id].en}</span><span class="lang-es">${otherLabels[id].es}</span>`;
+                const input = document.createElement('input');
+                input.type = id === 'year' ? 'number' : 'text';
+                input.id = `filter-${id}-other`;
+                input.name = `filter_${id}_other`;
+                input.className = 'mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm';
+                input.placeholder = id === 'year' ? 'e.g. 1975' : (id === 'make' ? 'e.g. Toyota' : (id === 'model' ? 'e.g. Corolla' : 'e.g. LE'));
+                input.min = id === 'year' ? '1900' : null;
+                input.max = id === 'year' ? (new Date().getFullYear() + 2) : null;
+                div.appendChild(label);
+                div.appendChild(input);
+                otherRow.appendChild(div);
+            });
+            fragment.appendChild(otherRow);
+
             const note = document.createElement('p');
-            note.className = 'text-xs text-gray-500 mt-2'; // Add top margin
+            note.className = 'text-xs text-gray-500 mt-2';
             note.innerHTML = `
-                <span class="lang-en">If you do not see your vehicle details above just leave it blank</span>
-                <span class="lang-es">Si no ve los detalles de su vehículo arriba, déjelo en blanco</span>
+                <span class="lang-en">Select from the lists above, or choose "Other" and type your vehicle details.</span>
+                <span class="lang-es">Seleccione de la lista o elija "Otro" y escriba los detalles de su vehículo.</span>
             `;
             fragment.appendChild(note);
-            // --- End NEW ---
 
             // Run CarQuery init *after* elements are in the DOM
             // We use setTimeout to ensure they are rendered first
             setTimeout(() => {
                 try {
-                    console.log("Initializing CarQuery for post-ad...");
-                    var carquery = new CarQuery();
-                    carquery.init();
-                    carquery.year_select_min = 1980;
-                    var currentYear = new Date().getFullYear();
-                    carquery.year_select_max = currentYear + 1;
-                    
-                    // Apply body filter if one exists (e.g., 'Motorcycle')
-                    const filters = { sold_in_us: false };
-                    if (filter.carQueryBody) {
-                        filters.body = filter.carQueryBody;
-                        console.log(`Applying CarQuery body filter: ${filter.carQueryBody}`);
+                    if (!window.NunciaYaVehicleFilters) {
+                        throw new Error('vehicle-filters.js not loaded');
                     }
-                    carquery.setFilters(filters);
-                    
-                    // Init using the IDs we just created
-                    carquery.initYearMakeModelTrim('filter-year', 'filter-make', 'filter-model', 'filter-trim');
-                    console.log("CarQuery initialized.");
-
-                    // If we are in edit mode, now we can try to set the values
-                    if (editMode && editListingData) {
-                        populateCarQueryValues(editListingData);
-                    }
-                } catch(e) {
-                    console.error("Error initializing CarQuery:", e);
+                    const vehicleMode = filter.carQueryBody === 'Motorcycle' ? 'motorcycle' : 'car';
+                    NunciaYaVehicleFilters.initPostAdFilters({
+                        yearEl: document.getElementById('filter-year'),
+                        makeEl: document.getElementById('filter-make'),
+                        modelEl: document.getElementById('filter-model'),
+                        trimEl: document.getElementById('filter-trim'),
+                        mode: vehicleMode,
+                        lang: typeof currentLang !== 'undefined' ? currentLang : 'es',
+                        onReady: function () {
+                            if (editMode && editListingData) {
+                                populateCarQueryValues(editListingData, vehicleMode);
+                            }
+                        },
+                    });
+                } catch (e) {
+                    console.error("Error initializing vehicle filters:", e);
                     wrapper.innerHTML = `<p class="text-red-600 col-span-4"><span class="lang-en">Error loading vehicle filters.</span><span class="lang-es">Error al cargar filtros de vehículo.</span></p>`;
                 }
             }, 0);
@@ -839,6 +1474,61 @@
             districtSelect.value = currentSelected; // Restore selection
         }
 
+        function updateServiceRadiusLabel(km) {
+            if (serviceRadiusLabel) serviceRadiusLabel.textContent = `${km} km`;
+        }
+
+        function syncServiceMapHiddenFields(state) {
+            if (!state || !locationLatInput || !locationLngInput) return;
+            locationLatInput.value = String(state.lat);
+            locationLngInput.value = String(state.lng);
+            postAdMapCenter = state;
+        }
+
+        function toggleServiceRadiusSection() {
+            if (!serviceRadiusSection) return;
+            const show = categorySelect.value === 'services';
+            serviceRadiusSection.classList.toggle('hidden', !show);
+            if (show) {
+                if (!postAdRadiusMapReady) initPostAdRadiusMap();
+                updatePostAdRadiusMapFromLocation();
+            }
+        }
+
+        function initPostAdRadiusMap() {
+            const mapEl = document.getElementById('post-ad-radius-map');
+            if (!mapEl || !window.NunciaYaRadiusMap || postAdRadiusMapReady) return;
+            const defaultKm = parseInt(serviceRadiusInput.value, 10) || 15;
+            postAdRadiusMapReady = NunciaYaRadiusMap.init(mapEl, {
+                defaultRadiusKm: defaultKm,
+                onChange: syncServiceMapHiddenFields
+            });
+            updateServiceRadiusLabel(defaultKm);
+            serviceRadiusInput.addEventListener('input', () => {
+                const km = parseInt(serviceRadiusInput.value, 10) || 15;
+                updateServiceRadiusLabel(km);
+                if (postAdMapCenter) NunciaYaRadiusMap.setRadiusKm(km);
+            });
+        }
+
+        async function updatePostAdRadiusMapFromLocation() {
+            if (!postAdRadiusMapReady || !window.getCenterForLocation || !window.NunciaYaRadiusMap) return;
+            const zone = zoneSelect.value;
+            if (!zone) {
+                NunciaYaRadiusMap.showDefaultView();
+                postAdMapCenter = null;
+                if (locationLatInput) locationLatInput.value = '';
+                if (locationLngInput) locationLngInput.value = '';
+                return;
+            }
+            const canton = cantonSelect.value;
+            const district = districtSelect.value;
+            const center = await getCenterForLocation(zone, canton, district);
+            if (!center) return;
+            const km = parseInt(serviceRadiusInput.value, 10) || 15;
+            NunciaYaRadiusMap.setCenter(center.lat, center.lng, km, { draggable: true });
+        }
+
 
         // Event listeners for dropdowns
         categorySelect.addEventListener('change', (e) => {
@@ -846,6 +1536,7 @@
             // Clear filters when category changes
             dynamicFiltersContainer.style.display = 'none';
             dynamicFiltersContainer.innerHTML = '';
+            toggleServiceRadiusSection();
         });
         subCategorySelect.addEventListener('change', (e) => {
             renderDynamicFilters(categorySelect.value, e.target.value);
@@ -853,9 +1544,14 @@
 
         zoneSelect.addEventListener('change', (e) => {
             populateCantons(e.target.value);
+            updatePostAdRadiusMapFromLocation();
         });
         cantonSelect.addEventListener('change', (e) => {
             populateDistricts(zoneSelect.value, e.target.value);
+            updatePostAdRadiusMapFromLocation();
+        });
+        districtSelect.addEventListener('change', () => {
+            updatePostAdRadiusMapFromLocation();
         });
 
 
@@ -883,30 +1579,79 @@
         dropZone.addEventListener('drop', handleDrop, false);
         // --- End Drag and Drop ---
 
+        function getTotalImageCount() {
+            return existingImageUrls.length + selectedFiles.length;
+        }
+
+        function wouldExceedFreeLimit(additionalCount) {
+            return getTotalImageCount() + additionalCount > getMaxImages();
+        }
+
+        function promptExtraImagesPaywall() {
+            showPaywallModal('extra_images');
+        }
+
         function handleFileSelect(event) {
              const files = event.target.files;
-             if (!files) return;
+             if (!files || files.length === 0) return;
 
-             const totalAllowed = 5;
-             const existingCount = existingImageUrls.length;
-             const newAllowedCount = totalAllowed - existingCount;
-
-             if (files.length > newAllowedCount) {
-                 displayMessage('max-5-images-total', 'error', { total: totalAllowed, existing: existingCount, new: newAllowedCount });
-             }
-
+             const allowedTypes = ['image/png', 'image/jpeg', 'image/gif'];
+             const allowedExt = ['png', 'jpg', 'jpeg', 'gif'];
              const validFiles = Array.from(files).filter((file, index) => {
                  let isValid = true;
-                 if (!['image/png', 'image/jpeg', 'image/gif'].includes(file.type)) { displayMessage('invalid-type', 'error', { index: index + 1 }); isValid = false; }
+                 const ext = (file.name.split('.').pop() || '').toLowerCase();
+                 const typeOk = allowedTypes.includes(file.type) || (file.type === '' && allowedExt.includes(ext));
+                 if (!typeOk) { displayMessage('invalid-type', 'error', { index: index + 1 }); isValid = false; }
                  if (file.size > 2 * 1024 * 1024) { displayMessage('size-limit', 'error', { index: index + 1 }); isValid = false; }
                  return isValid;
              });
-            
-             // Add only the allowed number of new files
-             selectedFiles = validFiles.slice(0, newAllowedCount);
-            
-             // Re-render all previews (existing + new)
+
+             if (validFiles.length === 0) {
+                 event.target.value = '';
+                 return;
+             }
+
+             if (!extraImagesUnlocked && wouldExceedFreeLimit(validFiles.length)) {
+                 promptExtraImagesPaywall();
+                 event.target.value = '';
+                 return;
+             }
+
+             const totalAllowed = getMaxImages();
+             const slotsRemaining = totalAllowed - getTotalImageCount();
+
+             if (slotsRemaining <= 0) {
+                 if (!extraImagesUnlocked && getTotalImageCount() >= getMaxImages()) {
+                     promptExtraImagesPaywall();
+                 } else {
+                     displayMessage('max-5-images-total', 'error', {
+                         total: totalAllowed,
+                         existing: getTotalImageCount(),
+                         new: 0,
+                     });
+                 }
+                 event.target.value = '';
+                 return;
+             }
+
+             const toAdd = validFiles.slice(0, slotsRemaining);
+             if (validFiles.length > slotsRemaining) {
+                 displayMessage('max-5-images-total', 'error', {
+                     total: totalAllowed,
+                     existing: getTotalImageCount(),
+                     new: slotsRemaining,
+                 });
+             }
+
+             selectedFiles = selectedFiles.concat(toAdd);
+
+             if (!extraImagesUnlocked && getTotalImageCount() > getMaxImages()) {
+                 selectedFiles = selectedFiles.slice(0, Math.max(0, getMaxImages() - existingImageUrls.length));
+                 promptExtraImagesPaywall();
+             }
+
              renderImagePreviews();
+             event.target.value = '';
         }
 
         function renderImagePreviews() {
@@ -941,46 +1686,111 @@
             });
         }
         
-        async function uploadImages(files, userId) {
-             if (!storage || files.length === 0) return [];
+        function mapStorageUploadError(error) {
+             let errorCode = 'image-upload-failed';
+             const code = error && error.code;
+             switch (code) {
+                 case 'storage/unauthorized':
+                 case 'storage/permission-denied':
+                     errorCode = 'image-auth-error';
+                     break;
+                 case 'storage/canceled':
+                     errorCode = 'image-upload-cancelled';
+                     break;
+                 default:
+                     break;
+             }
+             return { code: errorCode, originalError: error };
+        }
 
-             const uploadPromises = files.map((file, index) => {
-                 return new Promise((resolve, reject) => {
-                     const fileExt = file.name.split('.').pop() || 'jpg';
-                     const uniqueFileName = `${userId}/${Date.now()}-${index}.${fileExt}`;
-                     const storageRef = storage.ref(`listing-images/${uniqueFileName}`);
-                     const uploadTask = storageRef.put(file);
+        async function uploadSingleImage(file, userId, index, total, onProgress) {
+             if (auth && auth.currentUser) {
+                 await auth.currentUser.getIdToken(true);
+             }
 
-                     uploadTask.on('state_changed',
-                         (snapshot) => {
-                             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                              uploadProgressArea.textContent = `${currentLang === 'es' ? 'Subiendo imagen' : 'Uploading image'} ${index + 1}/${files.length}: ${progress.toFixed(0)}%`;
-                             uploadProgressArea.style.display = 'block';
-                         },
-                         (error) => {
-                             console.error(`Upload failed:`, error.code);
-                              let errorCode = 'image-upload-failed';
-                              switch (error.code) {
-                                  case 'storage/unauthorized': errorCode = 'image-auth-error'; break;
-                                  case 'storage/canceled': errorCode = 'image-upload-cancelled'; break;
-                                  default: errorCode = 'image-upload-failed'; break;
-                              }
-                             reject({ code: errorCode, originalError: error});
-                         },
-                         async () => {
-                             try {
-                                 const downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
-                                 resolve(downloadURL);
-                             } catch(urlError) {
-                                 reject({ code: 'image-url-failed', originalError: urlError});
-                             }
-                         }
-                     );
-                 });
+             const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+             const uniqueFileName = `${userId}/${Date.now()}-${index}-${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
+             const storageRef = storage.ref(`listing-images/${uniqueFileName}`);
+             const contentType = file.type || 'image/jpeg';
+             const uploadTask = storageRef.put(file, {
+                 contentType,
+                 customMetadata: { uploadedBy: userId }
              });
 
+             const timeoutMs = 120000;
+             let uploadTimedOut = false;
+             let timeoutId = setTimeout(() => {
+                 uploadTimedOut = true;
+                 try { uploadTask.cancel(); } catch (e) { /* ignore */ }
+             }, timeoutMs);
+
+             const clearUploadTimeout = () => {
+                 if (timeoutId) {
+                     clearTimeout(timeoutId);
+                     timeoutId = null;
+                 }
+             };
+
+             return new Promise((resolve, reject) => {
+                 const fail = (err) => {
+                     clearUploadTimeout();
+                     reject(err);
+                 };
+
+                 uploadTask.on(
+                     'state_changed',
+                     (snapshot) => {
+                         const progress = snapshot.totalBytes
+                             ? (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+                             : 0;
+                         onProgress(Math.round(progress), index + 1, total);
+                     },
+                     (error) => {
+                         console.error('Upload failed:', error.code, error.message);
+                         fail(mapStorageUploadError(error));
+                     }
+                 );
+
+                 uploadTask
+                     .then((snapshot) => snapshot.ref.getDownloadURL())
+                     .then((downloadURL) => {
+                         clearUploadTimeout();
+                         resolve(downloadURL);
+                     })
+                     .catch((error) => {
+                         console.error('Upload or getDownloadURL failed:', error);
+                         if (uploadTimedOut) {
+                             fail({ code: 'image-upload-failed', originalError: new Error('Upload timed out') });
+                         } else {
+                             fail(mapStorageUploadError(error));
+                         }
+                     });
+             });
+        }
+
+        async function uploadImages(files, userId) {
+             if (!storage || files.length === 0) {
+                 if (files.length > 0 && !storage) {
+                     console.error('Firebase Storage not available. Ensure firebase-storage-compat.js is loaded and Storage is initialized.');
+                 }
+                 return [];
+             }
+
+             const total = files.length;
+             const downloadURLs = [];
+             const label = currentLang === 'es' ? 'Subiendo imagen' : 'Uploading image';
+
+             function updateProgress(pct, current, count) {
+                 uploadProgressArea.textContent = `${label} ${current}/${count}: ${pct}%`;
+                 uploadProgressArea.style.display = 'block';
+             }
+
              try {
-                 const downloadURLs = await Promise.all(uploadPromises);
+                 for (let index = 0; index < files.length; index++) {
+                     updateProgress(0, index + 1, total);
+                     const url = await uploadSingleImage(files[index], userId, index, total, updateProgress);
+                     downloadURLs.push(url);
+                 }
                  uploadProgressArea.style.display = 'none';
                  return downloadURLs;
              } catch (error) {
@@ -1014,7 +1824,22 @@
                      'unknown-error': 'An unexpected error occurred.',
                      'firestore-error': 'Failed to save ad details.',
                      'auth-error': 'You must be logged in to post an ad.',
-                     'firebase-not-ready': 'Connection not ready. Please wait and try again.'
+                     'firebase-not-ready': 'Connection not ready. Please wait and try again.',
+                     'payment-error': 'Payment could not be started. Please try again or contact support.',
+                     'payment-not-configured': 'Online payments are not configured yet. Please try again later.',
+                     'payment-cancelled': 'Payment was cancelled. You can continue editing your ad.',
+                     'payment-extra-images-success': 'Payment successful! You can now add up to 5 photos.',
+                     'payment-housing-success': 'Payment successful! Click "Post Your Ad" to publish your listing.',
+                     'promo-error': 'That discount code could not be applied. Check the code and try again.',
+                     'promo-auth-required': 'Please sign in again on nunciaya.com to use discount codes (log out and log back in if needed).',
+                     'promo-invalid': 'Invalid discount code.',
+                     'promo-expired': 'This discount code has expired.',
+                     'promo-wrong_product': 'This code does not apply to this type of listing.',
+                     'promo-max_uses': 'This discount code has reached its usage limit.',
+                     'promo-already_used': 'You have already used this discount code.',
+                     'promo-housing-success': 'Discount applied! Your housing listing fee is covered. Click "Post Your Ad" to publish.',
+                     'promo-extra-images-success': 'Discount applied! You can now add up to 5 photos.',
+                     'housing-edit-not-allowed': 'An existing ad cannot be moved to Housing. Please post a new housing ad instead.',
                  },
                  es: {
                       'required-fields': 'Por favor complete todos los campos requeridos (*).',
@@ -1037,7 +1862,22 @@
                      'unknown-error': 'Ocurrió un error inesperado.',
                      'firestore-error': 'Error al guardar los detalles del anuncio.',
                      'auth-error': 'Debe iniciar sesión para publicar un anuncio.',
-                     'firebase-not-ready': 'Conexión no lista. Por favor espere e intente de nuevo.'
+                     'firebase-not-ready': 'Conexión no lista. Por favor espere e intente de nuevo.',
+                     'payment-error': 'No se pudo iniciar el pago. Intente de nuevo o contacte soporte.',
+                     'payment-not-configured': 'Los pagos en línea aún no están configurados. Intente más tarde.',
+                     'payment-cancelled': 'El pago fue cancelado. Puede seguir editando su anuncio.',
+                     'payment-extra-images-success': '¡Pago exitoso! Ahora puede añadir hasta 5 fotos.',
+                     'payment-housing-success': '¡Pago exitoso! Haga clic en "Publicar Anuncio" para publicar.',
+                     'promo-error': 'No se pudo aplicar el código de descuento. Verifique el código e intente de nuevo.',
+                     'promo-auth-required': 'Inicie sesión de nuevo en nunciaya.com para usar códigos de descuento (cierre sesión y vuelva a entrar si es necesario).',
+                     'promo-invalid': 'Código de descuento inválido.',
+                     'promo-expired': 'Este código de descuento ha expirado.',
+                     'promo-wrong_product': 'Este código no aplica a este tipo de anuncio.',
+                     'promo-max_uses': 'Este código alcanzó su límite de usos.',
+                     'promo-already_used': 'Ya utilizó este código de descuento.',
+                     'promo-housing-success': '¡Descuento aplicado! La tarifa de vivienda está cubierta. Haga clic en "Publicar Anuncio".',
+                     'promo-extra-images-success': '¡Descuento aplicado! Ahora puede añadir hasta 5 fotos.',
+                     'housing-edit-not-allowed': 'Un anuncio existente no se puede mover a Vivienda. Publique un nuevo anuncio de vivienda.',
                  }
              };
              let messageText;
@@ -1145,14 +1985,51 @@
                  return;
             }
 
+            // Real estate paywall: must pay before posting a housing ad
+            if (!editMode && categorySelect.value === 'housing' && !realEstatePaywallUnlocked) {
+                 pendingSubmitAfterPaywall = true;
+                 showPaywallModal('realestate');
+                 submitButton.disabled = false;
+                 return;
+            }
+
+            // Edits cannot turn a listing into a (paid) housing ad; firestore.rules rejects it too.
+            if (editMode && categorySelect.value === 'housing'
+                && editListingData && editListingData.category !== 'housing') {
+                 displayMessage('housing-edit-not-allowed', 'error');
+                 submitButton.disabled = false;
+                 return;
+            }
+
+            const totalImages = existingImageUrls.length + selectedFiles.length;
+            if (totalImages > getMaxImages() && !extraImagesUnlocked) {
+                 showPaywallModal('extra_images');
+                 submitButton.disabled = false;
+                 return;
+            }
+            if (totalImages > MAX_IMAGES_PAID) {
+                 displayMessage('max-5-images-total', 'error', {
+                     total: MAX_IMAGES_PAID,
+                     existing: existingImageUrls.length,
+                     new: Math.max(0, MAX_IMAGES_PAID - existingImageUrls.length),
+                 });
+                 submitButton.disabled = false;
+                 return;
+            }
+
             // --- Gather Form Data ---
             const formData = new FormData(postAdForm);
             const priceValue = formData.get('price');
-            const currencyValue = formData.get('currency');
+            const currencyValue = formData.get('currency') === 'usd' ? 'usd' : 'crc';
             let formattedPrice = '';
+            let priceAmount = null;
             if (priceValue) {
+                 priceAmount = parseFloat(priceValue);
                  formattedPrice = currencyValue === 'usd' ? `$${priceValue}` : `₡${priceValue}`;
             }
+
+            const now = firebase.firestore.Timestamp.now();
+            const expiresAt = (editMode && editListingData?.expiresAt) ? editListingData.expiresAt : firebase.firestore.Timestamp.fromMillis(now.toMillis() + 30 * 24 * 60 * 60 * 1000); // 30 days from now for new listings
 
             const adData = {
                  userId: user.uid,
@@ -1166,35 +2043,67 @@
                  description_en: descriptionEn,
                  description_es: descriptionEs,
                  price: formattedPrice,
+                 currency: priceValue ? currencyValue : null,
+                 priceAmount: priceAmount,
                  contactPhone: phone,
                  contactEmail: email,
-                 contactPreferences: [ // NEW
+                 contactPreferences: [
                      ...(isPrefPhone ? ['phone'] : []),
                      ...(isPrefWhatsApp ? ['whatsapp'] : []),
                      ...(isPrefEmail ? ['email'] : [])
                  ],
-                 imageUrls: [...existingImageUrls], // Start with existing images
-                 createdAt: (editMode && editListingData) ? editListingData.createdAt : firebase.firestore.Timestamp.now(), // Keep original date in edit mode
-                 status: (editMode && editListingData) ? editListingData.status : 'pending' // Keep status in edit mode
+                 imageUrls: [...existingImageUrls],
+                 createdAt: (editMode && editListingData) ? editListingData.createdAt : now,
+                 expiresAt: expiresAt,
+                 publicVisibleUntil: (editMode && editListingData?.publicVisibleUntil)
+                     ? editListingData.publicVisibleUntil
+                     : expiresAt,
+                 status: (editMode && editListingData) ? editListingData.status : 'active'
             };
 
             // --- NEW: Add dynamic filter data (for all types) ---
             dynamicFiltersContainer.querySelectorAll('select, input').forEach(input => {
-                if (input.name.startsWith('filter_') && input.value) {
-                    const key = input.name.substring(7); // e.g., "rooms", "condition", "year"
-                    
-                    // For CarQuery, we need the TEXT, not the value (except for year)
-                    if (key === 'make' || key === 'model' || key === 'trim') {
-                        if (input.value) { // Make sure it's not the placeholder
-                            adData[key] = input.options[input.selectedIndex].text;
+                if (!input.name || !input.name.startsWith('filter_')) return;
+                const key = input.name.substring(7); // e.g., "rooms", "condition", "year", "year_other"
+                if (key.endsWith('_other')) return; // Handle _other in CarQuery block below
+
+                if (input.tagName === 'SELECT') {
+                    const val = input.value;
+                    if (!val) return;
+                    // CarQuery fields: use "other" input value when user chose "Other"
+                    if (key === 'year' || key === 'make' || key === 'model' || key === 'trim') {
+                        const otherInput = dynamicFiltersContainer.querySelector(`input[name="filter_${key}_other"]`);
+                        if (val === 'other' && otherInput && otherInput.value && otherInput.value.trim()) {
+                            adData[key] = otherInput.value.trim();
+                        } else if (val !== 'other') {
+                            if (key === 'make' || key === 'model' || key === 'trim') {
+                                adData[key] = input.options[input.selectedIndex].text;
+                            } else {
+                                adData[key] = val; // year
+                            }
                         }
                     } else {
-                        // For all other filters (rooms, condition, year, etc.)
-                        adData[key] = input.value;
+                        adData[key] = val;
                     }
+                } else if (input.value) {
+                    adData[key] = input.value;
                 }
             });
             // --- End NEW ---
+
+            if (categorySelect.value === 'services') {
+                const mapState = window.NunciaYaRadiusMap && NunciaYaRadiusMap.getState
+                    ? NunciaYaRadiusMap.getState()
+                    : null;
+                const lat = mapState ? mapState.lat : parseFloat(locationLatInput.value);
+                const lng = mapState ? mapState.lng : parseFloat(locationLngInput.value);
+                const radiusKm = parseInt(serviceRadiusInput.value, 10) || 15;
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    adData.locationLat = lat;
+                    adData.locationLng = lng;
+                    adData.serviceRadiusKm = radiusKm;
+                }
+            }
 
              // --- Image Upload & Save ---
              try {
@@ -1217,10 +2126,11 @@
                    renderImagePreviews();
 
                  } else {
-                   // --- ADD New Ad ---
-                   const collectionRef = db.collection("listings");
-                   const docRef = await collectionRef.add(adData);
-                   console.log("Ad data saved to Firestore with ID:", docRef.id);
+                   // --- ADD New Ad (server checks/consumes payments and sets userId, dates, status) ---
+                   const newAd = { ...adData };
+                   ['userId', 'createdAt', 'expiresAt', 'publicVisibleUntil', 'status'].forEach((k) => delete newAd[k]);
+                   const created = await NunciaYaPayments.createListing(newAd);
+                   console.log("Ad created with ID:", created.id);
                    displayMessage('ad-posted-success', 'success');
                    
                    // Reset form only on new post
@@ -1228,6 +2138,9 @@
                    imagePreviewContainer.innerHTML = '';
                    selectedFiles = [];
                    existingImageUrls = [];
+                   realEstatePaywallUnlocked = false;
+                   extraImagesUnlocked = false;
+                   updateImageLimitLabel();
                    dynamicFiltersContainer.innerHTML = '';
                    dynamicFiltersContainer.style.display = 'none';
                    populateCategories();
@@ -1236,11 +2149,25 @@
                    cantonSelect.disabled = true;
                    districtSelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Cantón Primero' : 'Select Canton First'} --</option>`;
                    districtSelect.disabled = true;
+                   extraImagesUnlocked = false;
+                   realEstatePaywallUnlocked = false;
+                   updateImageLimitLabel();
+                   await refreshPaymentEntitlements(); // the user may have more unused payments
                  }
 
              } catch (error) {
                  console.error("Error during ad posting:", error);
-                 displayMessage(error?.code || 'firestore-error', 'error');
+                 const missingProduct = window.NunciaYaPayments && NunciaYaPayments.getMissingPaymentProduct(error);
+                 if (missingProduct === 'housing_listing') {
+                     realEstatePaywallUnlocked = false;
+                     showPaywallModal('realestate');
+                 } else if (missingProduct === 'extra_images') {
+                     extraImagesUnlocked = false;
+                     updateImageLimitLabel();
+                     showPaywallModal('extra_images');
+                 } else {
+                     displayMessage(error?.code || 'firestore-error', 'error');
+                 }
              } finally {
                   submitButton.disabled = false;
                   uploadProgressArea.style.display = 'none';
@@ -1285,7 +2212,7 @@
                  // Parse price
                  if (ad.price) {
                      const priceNum = ad.price.replace(/[^0-9.]/g, '');
-                     const currency = ad.price.includes('₡') ? 'crc' : 'usd';
+                     const currency = ad.currency || (ad.price.includes('₡') ? 'crc' : 'usd');
                      document.getElementById('price').value = priceNum;
                      document.getElementById('currency').value = currency;
                  }
@@ -1317,8 +2244,20 @@
                  populateDistricts(ad.zone, ad.canton); // Wait for options to be created
                  districtSelect.value = ad.district;
 
+                 toggleServiceRadiusSection();
+                 if (ad.category === 'services' && ad.locationLat != null && ad.locationLng != null) {
+                     if (!postAdRadiusMapReady) initPostAdRadiusMap();
+                     const km = ad.serviceRadiusKm || 15;
+                     serviceRadiusInput.value = km;
+                     updateServiceRadiusLabel(km);
+                     NunciaYaRadiusMap.setCenter(ad.locationLat, ad.locationLng, km, { draggable: true });
+                 }
+
                  // --- 5. Populate Images ---
                  existingImageUrls = ad.imageUrls || [];
+                 editImageAllowance = existingImageUrls.length;
+                 extraImagesUnlocked = ad.extraImagesPaid === true;
+                 updateImageLimitLabel();
                  renderImagePreviews();
 
              } catch (error) {
@@ -1347,89 +2286,18 @@
         /**
         * NEW: Populates the CarQuery filters (this is tricky!)
         */
-        function populateCarQueryValues(ad) {
-            console.log("Populating CarQuery values...", ad);
-            
-            const yearSelect = document.getElementById('filter-year');
-            const makeSelect = document.getElementById('filter-make');
-            
-            if (!yearSelect || !makeSelect) {
-                console.warn("CarQuery dropdowns not ready yet for population.");
-                // This function is called from renderDynamicFilters via setTimeout,
-                // so it should be fine, but we'll add a fallback.
-                setTimeout(() => populateCarQueryValues(ad), 500);
+        function populateCarQueryValues(ad, vehicleMode) {
+            console.log("Populating vehicle filter values...", ad);
+            if (!window.NunciaYaVehicleFilters) {
+                console.warn("vehicle-filters.js not loaded yet.");
+                setTimeout(function () { populateCarQueryValues(ad, vehicleMode); }, 300);
                 return;
             }
-            
-            // 1. Set Year
-            if (ad.year) {
-                yearSelect.value = ad.year;
-            }
-            
-            // 2. Trigger change on Year to load Makes
-            if (yearSelect.value) {
-                console.log("Triggering Year change to load Makes...");
-                $(yearSelect).change();
-            } else {
-                // If no year, just populate the other basic filters
-                 populateDynamicFilterValues(ad);
-            }
-
-            // 3. Wait for Makes to load, then set Make
-            setTimeout(() => {
-                if (makeSelect && ad.make) {
-                    console.log(`Attempting to set Make: ${ad.make}`);
-                    for (let opt of makeSelect.options) {
-                        if (opt.text === ad.make) {
-                            makeSelect.value = opt.value;
-                            console.log(`Found and set Make: ${opt.text}`);
-                            break;
-                        }
-                    }
-                    // 4. Trigger change on Make to load Models
-                    $(makeSelect).change();
-                } else {
-                     // If no make, just populate other filters
-                     populateDynamicFilterValues(ad);
-                }
-
-                // 5. Wait for Models to load, then set Model
-                setTimeout(() => {
-                    const modelSelect = document.getElementById('filter-model');
-                    if (modelSelect && ad.model) {
-                        console.log(`Attempting to set Model: ${ad.model}`);
-                        for (let opt of modelSelect.options) {
-                            if (opt.text === ad.model) {
-                                modelSelect.value = opt.value;
-                                console.log(`Found and set Model: ${opt.text}`);
-                                break;
-                            }
-                        }
-                        // 6. Trigger change on Model to load Trims
-                        $(modelSelect).change();
-                    } else {
-                        populateDynamicFilterValues(ad);
-                    }
-
-                    // 7. Wait for Trims to load, then set Trim
-                    setTimeout(() => {
-                        const trimSelect = document.getElementById('filter-trim');
-                        if (trimSelect && ad.trim) {
-                            console.log(`Attempting to set Trim: ${ad.trim}`);
-                            for (let opt of trimSelect.options) {
-                                if (opt.text === ad.trim) {
-                                    trimSelect.value = opt.value;
-                                    console.log(`Found and set Trim: ${opt.text}`);
-                                    break;
-                                }
-                            }
-                        }
-                        // 8. Finally, populate all other simple filters
-                        populateDynamicFilterValues(ad);
-                        
-                    }, 1000); // Wait for trims
-                }, 1000); // Wait for models
-            }, 1000); // Wait for makes
+            NunciaYaVehicleFilters.populatePostAdValues(ad, {
+                mode: vehicleMode || 'car',
+                lang: currentLang,
+            });
+            populateDynamicFilterValues(ad);
         }
 
 
@@ -1441,8 +2309,8 @@
              renderImagePreviews(); // Re-render
             
              // Allow one more new file to be added
-             const newAllowedCount = 5 - existingImageUrls.length;
-             displayMessage('max-5-images-total', 'info', { total: 5, existing: existingImageUrls.length, new: newAllowedCount });
+             const newAllowedCount = getMaxImages() - existingImageUrls.length;
+             displayMessage('max-5-images-total', 'info', { total: getMaxImages(), existing: existingImageUrls.length, new: newAllowedCount });
         }
         
         function handleRemoveNewImage(e) {
@@ -1511,18 +2379,30 @@
                                  }
                                  
                                  if (editMode) {
-                                     // This is an edit, load the ad data
                                      pageTitle.querySelector('.lang-en').textContent = 'Edit Your Ad';
                                      pageTitle.querySelector('.lang-es').textContent = 'Editar Su Anuncio';
                                      submitButton.querySelector('.lang-en').textContent = 'Update Ad';
                                      submitButton.querySelector('.lang-es').textContent = 'Actualizar Anuncio';
                                      await loadListingForEdit(editAdId);
                                  } else {
-                                     // This is a new post, just set defaults
                                      cantonSelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Provincia Primero' : 'Select Province First'} --</option>`;
                                      districtSelect.innerHTML = `<option value="" disabled selected>-- ${currentLang === 'es' ? 'Seleccione Cantón Primero' : 'Select Canton First'} --</option>`;
+                                     extraImagesUnlocked = false;
+                                     realEstatePaywallUnlocked = false;
                                  }
 
+                                 setupPaywallModalListeners();
+                                 if (window.NunciaYaPayments) {
+                                     try {
+                                         const paymentResult = await NunciaYaPayments.handlePaymentReturn();
+                                         await applyPaymentReturnResult(paymentResult);
+                                     } catch (paymentErr) {
+                                         console.error('Payment return verification failed:', paymentErr);
+                                         displayMessage('payment-error', 'error');
+                                     }
+                                 }
+                                 await refreshPaymentEntitlements();
+                                 updateImageLimitLabel();
                                  if (window.setLang) window.setLang(currentLang);
                              } else {
                                  console.log("Auth state changed, but no user found.");
@@ -1535,16 +2415,7 @@
                      else { throw new Error("Firebase instances not available after delay."); }
                  }
 
-                 imageInput.addEventListener('change', handleFileSelect);
-                 categorySelect.addEventListener('change', (e) => { populateSubCategories(e.target.value); });
-                 subCategorySelect.addEventListener('change', (e) => { renderDynamicFilters(categorySelect.value, e.target.value); });
-                 zoneSelect.addEventListener('change', (e) => { populateCantons(e.target.value); });
-                 cantonSelect.addEventListener('change', (e) => { populateDistricts(zoneSelect.value, e.target.value); });
-                  // Add Drag and Drop listeners early
-                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { dropZone.addEventListener(eventName, preventDefaults, false); document.body.addEventListener(eventName, preventDefaults, false); });
-                 ['dragenter', 'dragover'].forEach(eventName => dropZone.addEventListener(eventName, highlightDropZone, false));
-                 ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, unhighlightDropZone, false));
-                 dropZone.addEventListener('drop', handleDrop, false);
+                 // Event listeners for category/location/image are already attached at script load (lines 846-885)
 
              } catch(error) {
                   console.error("Initialization error on post-ad.html:", error);
