@@ -216,6 +216,7 @@ const verifyCheckoutSession = functions.https.onCall(async (data, context) => {
     promoCode: promoCode || null,
     currency: session.currency,
     stripePaymentIntent: session.payment_intent || null,
+    livemode: session.livemode === true,
     paidAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
 
@@ -296,6 +297,7 @@ const stripeWebhook = functions.https.onRequest(async (req, res) => {
         promoCode: promoCode || null,
         currency: session.currency,
         stripePaymentIntent: session.payment_intent || null,
+        livemode: session.livemode === true,
         paidAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
 

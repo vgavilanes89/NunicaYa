@@ -13,6 +13,7 @@
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { isStripeLive } = require("./stripe-mode");
 
 const db = admin.firestore();
 
@@ -139,7 +140,9 @@ function isUnusedPaymentFor(data, uid, productType) {
     && data.userId === uid
     && data.productType === productType
     && data.status === "paid"
-    && !data.consumedByListingId;
+    && !data.consumedByListingId
+    // Test-mode records (and pre-launch promo records) never unlock live listings.
+    && (!isStripeLive() || data.livemode === true);
 }
 
 /**

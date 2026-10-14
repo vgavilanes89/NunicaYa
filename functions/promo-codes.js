@@ -4,57 +4,24 @@
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { isStripeLive } = require("./stripe-mode");
 
 const db = admin.firestore();
 
-/** Default codes — run adminSeedPromoCodes to write these to Firestore. */
-const DEFAULT_PROMO_CODES = {
-  NUNCIAFREE: {
-    code: "NUNCIAFREE",
-    label: "100% off — free listing",
-    discountPercent: 100,
-    productTypes: ["housing_listing", "extra_images"],
-    active: true,
-    maxUses: null,
-    maxUsesPerUser: 1,
-  },
-  HOUSING50: {
-    code: "HOUSING50",
-    label: "50% off housing listing",
-    discountPercent: 50,
-    productTypes: ["housing_listing"],
-    active: true,
-    maxUses: null,
-    maxUsesPerUser: 3,
-  },
-  HOUSING25: {
-    code: "HOUSING25",
-    label: "25% off housing listing",
-    discountPercent: 25,
-    productTypes: ["housing_listing"],
-    active: true,
-    maxUses: null,
-    maxUsesPerUser: 3,
-  },
-  PHOTOS50: {
-    code: "PHOTOS50",
-    label: "50% off extra photos",
-    discountPercent: 50,
-    productTypes: ["extra_images"],
-    active: true,
-    maxUses: null,
-    maxUsesPerUser: 3,
-  },
-  NUNCIAFREEALL: {
-    code: "NUNCIAFREEALL",
-    label: "100% off — unlimited free listing",
-    discountPercent: 100,
-    productTypes: ["housing_listing", "extra_images"],
-    active: true,
-    maxUses: null,
-    maxUsesPerUser: null,
-  },
-};
+/**
+ * Built-in codes: none since go-live. Codes are created from the admin page
+ * (adminUpsertPromoCode); nothing is auto-seeded or re-activated.
+ */
+const DEFAULT_PROMO_CODES = {};
+
+/** Demo-era default codes (published in the public repo); permanently refused. */
+const RETIRED_PROMO_CODES = new Set([
+  "NUNCIAFREE",
+  "NUNCIAFREEALL",
+  "HOUSING50",
+  "HOUSING25",
+  "PHOTOS50",
+]);
 
 function normalizeCode(code) {
   return String(code || "").trim().toUpperCase();
@@ -123,7 +90,7 @@ async function ensureDefaultPromoCodesInFirestore() {
 
 async function loadPromoCode(code) {
   const id = normalizeCode(code);
-  if (!id) return null;
+  if (!id || RETIRED_PROMO_CODES.has(id)) return null;
   await ensureDefaultPromoCodesInFirestore();
   const snap = await db.collection("promo-codes").doc(id).get();
   if (snap.exists) {
@@ -374,6 +341,7 @@ const redeemPromoCode = functions.https.onCall(async (data, context) => {
     promoCode: result.code,
     discountPercent: result.discountPercent,
     promoRedemptionId: redemptionId,
+    livemode: isStripeLive(),
     paidAt: admin.firestore.FieldValue.serverTimestamp(),
     source: "promo_free",
   });
@@ -394,6 +362,7 @@ const adminListPromoCodes = functions.https.onCall(async (data, context) => {
     codes: snap.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
+      retired: RETIRED_PROMO_CODES.has(doc.id),
       expiresAt: doc.data().expiresAt && doc.data().expiresAt.toMillis
         ? doc.data().expiresAt.toMillis()
         : null,
@@ -429,6 +398,12 @@ const adminUpsertPromoCode = functions.https.onCall(async (data, context) => {
   const code = normalizeCode(data && data.code);
   if (!code) {
     throw new functions.https.HttpsError("invalid-argument", "code is required.");
+  }
+  if (RETIRED_PROMO_CODES.has(code)) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "This code name is retired (it was public during the demo). Choose another name.",
+    );
   }
 
   const discountPercent = Math.min(100, Math.max(0, Number(data.discountPercent) || 0));

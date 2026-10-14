@@ -709,7 +709,9 @@
         }
         const rows = codes.map((c) => {
             const products = (c.productTypes || []).join(', ');
-            const status = c.active === false ? t('Inactive', 'Inactivo') : t('Active', 'Activo');
+            const status = c.retired
+                ? t('Retired', 'Retirado')
+                : (c.active === false ? t('Inactive', 'Inactivo') : t('Active', 'Activo'));
             const uses = `${c.useCount || 0}${c.maxUses != null ? ` / ${c.maxUses}` : ''}`;
             return `<tr class="border-b border-gray-100 text-sm">
                 <td class="py-2 pr-4 font-mono font-semibold">${c.code || c.id}</td>

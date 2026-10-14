@@ -60,7 +60,7 @@ const APP_CONFIG = {
 const PAYMENTS_CONFIG = {
     enabled: true,
     currency: 'usd',
-    stripePublishableKey: 'pk_test_51TdYPV1i29Gd2fPpFIvnphONcJGuNwAdeJlrMl8hUMnIG1zkoINGbM0xtFikR1QILM2wn086KlrrkSl20kVygJou001Zz6f4og',
+    stripePublishableKey: 'pk_live_51TdYPH1hMtdoX8D8ovFCnxEzBMVLghd0KF1oNokieSHZeOGHSlRbc5iKGYmnaqQkaoLek6vCr6ZVfX5y1aIp2c2n00k8CGpJbt',
     products: {
         extra_images: {
             priceUsd: 2,
