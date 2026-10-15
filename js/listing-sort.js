@@ -1,5 +1,9 @@
 /**
- * Client-side sort for Algolia listing search results.
+ * Sort options for listing search results.
+ *
+ * Pages that search Algolia should sort server-side by searching the replica from
+ * sortIndexName() (see functions/algolia-config.js). sortHits() is the in-browser fallback for
+ * pages that still sort one page of hits; it compares prices in USD so ₡ and $ mix correctly.
  */
 (function (global) {
     const SORT_OPTIONS = [
@@ -11,13 +15,40 @@
 
     const DEFAULT_SORT = 'newest';
 
+    // Algolia replica suffix per sort id (must match SORT_REPLICAS in functions/algolia-config.js)
+    const REPLICA_SUFFIX = {
+        newest: '_newest',
+        oldest: '_oldest',
+        price_asc: '_price_asc',
+        price_desc: '_price_desc',
+    };
+
+    function crcPerUsd() {
+        const app = global.config && global.config.app;
+        return (app && Number(app.crcPerUsd)) || 505;
+    }
+
+    /** Price in USD, so colón and dollar listings compare correctly. */
     function getPriceSortValue(hit) {
         if (hit == null) return null;
-        if (hit.priceAmount != null && !Number.isNaN(Number(hit.priceAmount))) {
-            return Number(hit.priceAmount);
+        if (hit.priceUsd != null && !Number.isNaN(Number(hit.priceUsd))) {
+            return Number(hit.priceUsd);
         }
-        const parsed = parseFloat(String(hit.price || '').replace(/[^0-9.]/g, ''));
-        return Number.isNaN(parsed) ? null : parsed;
+        let amount = null;
+        if (hit.priceAmount != null && !Number.isNaN(Number(hit.priceAmount))) {
+            amount = Number(hit.priceAmount);
+        } else {
+            const parsed = parseFloat(String(hit.price || '').replace(/[^0-9.]/g, ''));
+            if (!Number.isNaN(parsed)) amount = parsed;
+        }
+        if (amount == null) return null;
+        const isUsd = hit.currency === 'usd' || (!hit.currency && String(hit.price || '').indexOf('$') !== -1);
+        return isUsd ? amount : amount / crcPerUsd();
+    }
+
+    /** Algolia index (replica) that returns results already in this sort order. */
+    function sortIndexName(baseIndexName, sortId) {
+        return baseIndexName + (REPLICA_SUFFIX[sortId] || REPLICA_SUFFIX[DEFAULT_SORT]);
     }
 
     function sortHits(hits, sortId) {
@@ -65,6 +96,8 @@
         SORT_OPTIONS,
         defaultSort: DEFAULT_SORT,
         sortHits,
+        sortIndexName,
+        getPriceSortValue,
         populateSortSelect,
     };
 })(typeof window !== 'undefined' ? window : global);

@@ -56,38 +56,8 @@ async function requireAdminRequest(req, res) {
   }
 }
 
-// Facets used by category search pages (vehicle + condition + status filters).
-const ALGOLIA_FACET_ATTRIBUTES = [
-  "baths",
-  "canton",
-  "category",
-  "district",
-  "expiresAtSeconds",
-  "rooms",
-  "subCategory",
-  "zone",
-  "filterOnly(year)",
-  "filterOnly(make)",
-  "filterOnly(model)",
-  "filterOnly(trim)",
-  "filterOnly(condition)",
-  "filterOnly(status)",
-  "filterOnly(type)",
-];
-
-async function configureAlgoliaIndexSettings(algoliaIndex) {
-  await algoliaIndex.setSettings({
-    attributesForFaceting: ALGOLIA_FACET_ATTRIBUTES,
-    numericAttributesForFiltering: [
-      "expiresAtSeconds",
-      "publicVisibleUntilSeconds",
-      "createdAtSeconds",
-    ],
-  });
-  console.log(
-    "Algolia index settings updated (vehicle facets: year, make, model, trim, condition, status).",
-  );
-}
+// Facets, numeric filters, sort replicas and derived price/year fields live in algolia-config.js.
+const algoliaConfig = require("./algolia-config");
 
 // --- Build a plain, JSON-safe object for Algolia (ensures title_en/title_es are always included) ---
 function listingToAlgoliaObject(data, objectID) {
@@ -131,6 +101,11 @@ function listingToAlgoliaObject(data, objectID) {
   if (typeof data.serviceRadiusKm === "number") {
     out.serviceRadiusKm = data.serviceRadiusKm;
   }
+  // priceUsd (₡ and $ comparable) and yearNumber power range filters and sort replicas
+  const derived = algoliaConfig.derivedSearchFields(data);
+  Object.keys(derived).forEach((k) => {
+    if (derived[k] != null) out[k] = derived[k];
+  });
   if (out.publicVisibleUntilSeconds == null) {
     if (out.expiresAtSeconds != null) {
       out.publicVisibleUntilSeconds = out.expiresAtSeconds;
@@ -250,7 +225,10 @@ exports.backfillDatabaseToAlgolia = functions
     console.log("Starting Algolia backfill...");
 
     try {
-      await configureAlgoliaIndexSettings(algoliaIndex);
+      await algoliaConfig.configureAlgoliaIndexSettings(
+        algoliasearch(ALGOLIA_APP_ID, ALGOLIA_API_KEY),
+        "listings",
+      );
 
       const snapshot = await db.collection("listings").get();
 
@@ -289,15 +267,15 @@ exports.backfillDatabaseToAlgolia = functions
  */
 exports.configureAlgoliaIndex = functions.https.onRequest(async (req, res) => {
   if (!(await requireAdminRequest(req, res))) return;
-  const algoliaIndex = initializeAlgoliaClient();
-  if (!algoliaIndex) {
+  if (!ALGOLIA_APP_ID || !ALGOLIA_API_KEY) {
     res.status(500).send("Algolia client not initialized. Check environment variables.");
     return;
   }
 
   try {
-    await configureAlgoliaIndexSettings(algoliaIndex);
-    res.status(200).send("Algolia index facets configured successfully.");
+    const client = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_API_KEY);
+    await algoliaConfig.configureAlgoliaIndexSettings(client, "listings");
+    res.status(200).send("Algolia index facets, numeric filters and sort replicas configured.");
   } catch (error) {
     console.error("Error configuring Algolia index:", error);
     res.status(500).send(`Failed to configure Algolia index: ${error.message}`);

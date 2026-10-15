@@ -52,7 +52,11 @@ const APP_CONFIG = {
     searchResultsPerPage: 50,
 
     // Refer-a-friend: points earned per successful signup (must match Cloud Function)
-    referralPointsPerSignup: 1
+    referralPointsPerSignup: 1,
+
+    // Colones per US dollar, for comparing ₡ and $ prices in search filters and sorting.
+    // Must match CRC_PER_USD in functions/algolia-config.js (or the CRC_PER_USD env var).
+    crcPerUsd: 505
 };
 
 // Payments (Stripe Checkout via Cloud Functions)

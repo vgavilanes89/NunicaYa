@@ -401,7 +401,7 @@ let firebaseInitializationError = null; // Store potential error
     if (typeof XMLHttpRequest === 'undefined') return;
     try {
         const xhr = new XMLHttpRequest();
-        xhr.open('GET', 'js/payments.js?v=4', false);
+        xhr.open('GET', '/js/payments.js?v=4', false);
         xhr.send(null);
         if (xhr.status >= 200 && xhr.status < 300 && xhr.responseText) {
             // eslint-disable-next-line no-new-func
