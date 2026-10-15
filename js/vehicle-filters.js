@@ -64,10 +64,10 @@
   function uiLabels(lang) {
     const es = lang === 'es';
     return {
-      allYears: es ? 'Año' : 'Year',
-      allMakes: es ? 'Marca' : 'Make',
-      allModels: es ? 'Modelo' : 'Model',
-      allTrims: es ? 'Versión' : 'Trim',
+      allYears: es ? 'Todos los Años' : 'All Years',
+      allMakes: es ? 'Todas las Marcas' : 'All Makes',
+      allModels: es ? 'Todos los Modelos' : 'All Models',
+      allTrims: es ? 'Todas las Versiones' : 'All Trims',
       other: es ? 'Otro' : 'Other',
     };
   }

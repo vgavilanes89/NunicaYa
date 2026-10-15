@@ -10,7 +10,7 @@
     <!-- Link to the external stylesheet (two levels up) -->
     <link rel="stylesheet" href="../../style.css">
 
-    <script src="../../js/vehicle-filters.js?v=2"></script>
+    <script src="../../js/vehicle-filters.js?v=3"></script>
 
     <!-- Load Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -248,9 +248,9 @@
             </div>
             
             <!-- Filter Dropdowns - 8 filters -->
-            <div id="filter-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-3">
+            <div id="filter-grid" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-2 mt-3">
                 <!-- Location Filters -->
-                <select id="filter-zone" class="p-2 border border-gray-300 rounded-md filter-select">
+                <select id="filter-zone" class="p-2 border border-gray-300 rounded-md filter-select col-span-2 md:col-span-1">
                     <option value="" id="all-zones-option"></option>
                     <!-- Populated by JS -->
                 </select>
@@ -445,11 +445,11 @@
             // *** UPDATED FOR THIS PAGE ***
             'search-input': { en: 'Search motorcycles...', es: 'Buscar motocicletas...' },
             // --- Location text ---
-            'all-zones-option': { en: 'Province', es: 'Provincia' },
-            'all-cantons-option': { en: 'Canton', es: 'Cantón' },
-            'all-districts-option': { en: 'District', es: 'Distrito' },
+            'all-zones-option': { en: 'All Provinces', es: 'Todas las Provincias' },
+            'all-cantons-option': { en: 'All Cantons', es: 'Todos los Cantones' },
+            'all-districts-option': { en: 'All Districts', es: 'Todos los Distritos' },
             // *** Auto-specific text ***
-            'all-conditions-option': { en: 'Condition', es: 'Condición' },
+            'all-conditions-option': { en: 'New & Used', es: 'Nuevo y Usado' },
             'condition-new-option': { en: 'New', es: 'Nueva' },
             'condition-used-option': { en: 'Used', es: 'Usada' },
             // Note: CarQuery API populates its own dropdown text
