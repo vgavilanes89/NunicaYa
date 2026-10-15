@@ -1,13 +1,13 @@
 /**
  * Price and year range filters for category search pages.
  *
- * Renders "Year from / to" (optional) and "Price from / to" with a ₡ / $ selector into a
- * container, and turns them into Algolia numericFilters on priceUsd / yearNumber
+ * Appends "Year from / to" (optional) and "Price from / to" with a ₡ / $ selector to a
+ * container (the page's filter grid, so they line up with the other filters), and turns them into Algolia numericFilters on priceUsd / yearNumber
  * (derived server-side in functions/algolia-config.js). Prices typed in colones are converted
  * with config.app.crcPerUsd.
  *
  * Usage:
- *   const ranges = NunciaYaListingRanges.mount(el, { year: true, lang, onChange: runSearch });
+ *   const ranges = NunciaYaListingRanges.mount(filterGrid, { year: true, lang, onChange: runSearch });
  *   searchOptions.numericFilters = ranges.getNumericFilters();
  */
 (function (global) {
@@ -57,11 +57,8 @@
         let lang = options.lang === 'en' ? 'en' : 'es';
         const onChange = typeof options.onChange === 'function' ? options.onChange : function () {};
         const maxYear = new Date().getFullYear() + 1;
-        const selectClass = 'p-2 border border-gray-300 rounded-md filter-select';
+        const selectClass = 'p-2 border border-gray-300 rounded-md filter-select w-full';
         const inputClass = 'p-2 border border-gray-300 rounded-md filter-input w-full';
-
-        container.classList.add('grid', 'grid-cols-2', 'gap-4', 'mt-4');
-        container.classList.add(options.year ? 'md:grid-cols-5' : 'md:grid-cols-3');
 
         let yearFrom = null;
         let yearTo = null;

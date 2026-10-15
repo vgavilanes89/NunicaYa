@@ -29,7 +29,7 @@
     <script src="../../js/radius-map.js"></script>
     <script src="../../js/listing-radius-filter.js"></script>
     <script src="../../js/listing-sort.js?v=2"></script>
-    <script src="../../js/listing-range-filters.js?v=1"></script>
+    <script src="../../js/listing-range-filters.js?v=2"></script>
 
     <style>
         /* Style for the favorite button */
@@ -248,7 +248,7 @@
             </div>
             
             <!-- Filter Dropdowns - 4 filters -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div id="filter-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                 <!-- Location Filters -->
                 <select id="filter-zone" class="p-2 border border-gray-300 rounded-md filter-select">
                     <option value="" id="all-zones-option"></option>
@@ -270,9 +270,6 @@
                     <option value="used" id="condition-used-option"></option>
                 </select>
             </div>
-
-            <!-- Price / year range (js/listing-range-filters.js) -->
-            <div id="range-filters"></div>
 
             <!-- Radius mini map -->
             <div id="radius-map-section" class="mt-4 pt-4 border-t border-gray-200">
@@ -1033,7 +1030,7 @@
                     const loadMoreBtn = document.getElementById('load-more-btn');
                     if (loadMoreBtn) loadMoreBtn.addEventListener('click', () => runSearch(true));
                     if (window.NunciaYaListingRanges) {
-                        listingRanges = NunciaYaListingRanges.mount(document.getElementById('range-filters'), {
+                        listingRanges = NunciaYaListingRanges.mount(document.getElementById('filter-grid'), {
                             year: false,
                             lang: currentLang,
                             onChange: runSearch,
