@@ -10,7 +10,7 @@
     <!-- Link to the external stylesheet (two levels up) -->
     <link rel="stylesheet" href="../../style.css">
 
-    <script src="../../js/vehicle-filters.js"></script>
+    <script src="../../js/vehicle-filters.js?v=2"></script>
 
     <!-- Load Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -29,7 +29,7 @@
     <script src="../../js/radius-map.js"></script>
     <script src="../../js/listing-radius-filter.js"></script>
     <script src="../../js/listing-sort.js?v=2"></script>
-    <script src="../../js/listing-range-filters.js?v=2"></script>
+    <script src="../../js/listing-range-filters.js?v=3"></script>
 
     <style>
         /* Style for the favorite button */
@@ -160,8 +160,8 @@
         
         /* --- NEW: Sleek Filter Styles --- */
         .filter-select {
-            height: 2.5rem; /* h-10 */
-            font-size: 0.875rem; /* text-sm */
+            height: 2.25rem; /* h-9 */
+            font-size: 0.8125rem; /* 13px */
             padding-top: 0;
             padding-bottom: 0;
         }
@@ -172,12 +172,12 @@
             opacity: 0.7;
         }
         .filter-input {
-             height: 2.5rem; /* h-10 */
-             font-size: 0.875rem; /* text-sm */
+             height: 2.25rem; /* h-9 */
+             font-size: 0.8125rem; /* 13px */
         }
         .filter-btn {
-             height: 2.5rem; /* h-10 */
-             font-size: 0.875rem; /* text-sm */
+             height: 2.25rem; /* h-9 */
+             font-size: 0.8125rem; /* 13px */
              padding-top: 0;
              padding-bottom: 0;
         }
@@ -230,7 +230,7 @@
         ============================================================
         -->
         <div class="bg-white p-4 rounded-md shadow-sm border border-gray-200 mb-6">
-            <div class="flex flex-wrap gap-4 items-center">
+            <div class="flex flex-wrap gap-2 items-center">
                 <!-- Search Bar -->
                 <form class="flex-grow min-w-[200px]" onsubmit="event.preventDefault(); runSearch();">
                     <input type="text" id="search-input" placeholder=""
@@ -248,17 +248,17 @@
             </div>
             
             <!-- Filter Dropdowns - UPDATED layout, now 8 filters -->
-            <div id="filter-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div id="filter-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-3">
                 <!-- Location Filters -->
                 <select id="filter-zone" class="p-2 border border-gray-300 rounded-md filter-select">
                     <option value="" id="all-zones-option"></option>
                     <!-- Populated by JS -->
                 </select>
-                <select id="filter-canton" class="p-2 border border-gray-300 rounded-md filter-select" disabled>
+                <select id="filter-canton" class="p-2 border border-gray-300 rounded-md filter-select hidden" disabled>
                     <option value="" id="all-cantons-option"></option>
                     <!-- Populated by JS -->
                 </select>
-                <select id="filter-district" class="p-2 border border-gray-300 rounded-md filter-select" disabled>
+                <select id="filter-district" class="p-2 border border-gray-300 rounded-md filter-select hidden" disabled>
                     <option value="" id="all-districts-option"></option>
                     <!-- Populated by JS -->
                 </select>
@@ -445,11 +445,11 @@
             // *** UPDATED FOR THIS PAGE ***
             'search-input': { en: 'Search auto parts...', es: 'Buscar repuestos...' },
             // --- Location text ---
-            'all-zones-option': { en: 'All Provinces', es: 'Todas las Provincias' },
-            'all-cantons-option': { en: 'All Cantons', es: 'Todos los Cantones' },
-            'all-districts-option': { en: 'All Districts', es: 'Todos los Distritos' },
+            'all-zones-option': { en: 'Province', es: 'Provincia' },
+            'all-cantons-option': { en: 'Canton', es: 'Cantón' },
+            'all-districts-option': { en: 'District', es: 'Distrito' },
             // *** Auto-specific text ***
-            'all-conditions-option': { en: 'All Conditions', es: 'Todas las Cond.' },
+            'all-conditions-option': { en: 'Condition', es: 'Condición' },
             'condition-new-option': { en: 'New', es: 'Nuevo' },
             'condition-used-option': { en: 'Used', es: 'Usado' },
             // Note: CarQuery API populates its own dropdown text, so we don't need 'all-makes' etc. here
@@ -625,6 +625,12 @@
             filterZone.value = currentSelected;
         }
 
+        // Canton shows once a province is chosen, district once a canton is chosen.
+        function setLocationFilterVisible(select, visible) {
+            select.disabled = !visible;
+            select.classList.toggle('hidden', !visible);
+        }
+
         function populateCantons(provinceKey) {
             if (typeof costaRicaLocations === 'undefined') return;
             const currentSelected = filterCanton.value;
@@ -637,10 +643,10 @@
             filterCanton.appendChild(allOption);
 
             filterDistrict.innerHTML = `<option value="" id="all-districts-option">${pageSpecificText['all-districts-option'][currentLang]}</option>`;
-            filterDistrict.disabled = true;
+            setLocationFilterVisible(filterDistrict, false);
 
             if (!provinceKey || !costaRicaLocations[provinceKey]) {
-                filterCanton.disabled = true;
+                setLocationFilterVisible(filterCanton, false);
                 return;
             }
 
@@ -652,7 +658,7 @@
                 option.textContent = canton.nombre;
                 filterCanton.appendChild(option);
             }
-            filterCanton.disabled = false;
+            setLocationFilterVisible(filterCanton, true);
             filterCanton.value = currentSelected;
         }
 
@@ -668,7 +674,7 @@
             filterDistrict.appendChild(allOption);
 
             if (!provinceKey || !cantonKey || !costaRicaLocations[provinceKey]?.cantones[cantonKey]) {
-                filterDistrict.disabled = true;
+                setLocationFilterVisible(filterDistrict, false);
                 return;
             }
 
@@ -679,7 +685,7 @@
                 option.textContent = distritoName;
                 filterDistrict.appendChild(option);
             });
-            filterDistrict.disabled = false;
+            setLocationFilterVisible(filterDistrict, true);
             filterDistrict.value = currentSelected;
         }
         // --- End Location Functions ---
