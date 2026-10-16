@@ -65,25 +65,24 @@ svg {
     }
 }
 
-/* Home page categories flow down balanced columns (like a newspaper) instead of rows, so a
-   long list such as "En Venta" doesn't leave empty space under the shorter ones. */
-.category-columns {
-    column-count: 1;
-    column-gap: 0;
+/* Home page: Housing and Personals share a wrapper. Below 1280px the wrapper takes no part in
+   the layout (display: contents) and Personals keeps its last place (order), exactly as before.
+   From 1280px (five per row) Personals would otherwise wrap alone under Housing below the tall
+   "For Sale" column, so there it stacks directly under Housing instead. */
+.category-stack {
+    display: contents;
 }
-.category-columns > .category-block {
-    width: 100%;
-    break-inside: avoid;
-    page-break-inside: avoid;
-}
-@media (min-width: 640px) {
-    .category-columns { column-count: 2; }
-}
-@media (min-width: 1024px) {
-    .category-columns { column-count: 3; }
+.category-stack > .category-personals {
+    order: 1;
 }
 @media (min-width: 1280px) {
-    .category-columns { column-count: 4; }
+    .category-stack {
+        display: block;
+        width: 20%;
+    }
+    .category-stack > .category-block {
+        width: 100%;
+    }
 }
 
 /* Compiled from Tailwind:

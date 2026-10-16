@@ -57,25 +57,43 @@
             </form>
         </div>
 
-        <!-- Category Columns (Static content): CSS columns, so short categories don't leave row gaps -->
-        <div class="category-columns mx-0 sm:-mx-4">
+        <!-- Category Columns (Static content) -->
+        <div class="flex flex-wrap mx-0 sm:-mx-4">
 
-            <!-- Housing -->
-            <div class="category-block">
-                <h3 class="category-title">
-                    <span class="lang-en">Housing</span>
-                    <span class="lang-es">Vivienda</span>
-                </h3>
-                <ul class="subcategory-list">
-                    <li><a href="./pages/housing/apartments.html" class="category-link"><span class="lang-en">apartments / housing</span><span class="lang-es">apartamentos / casas</span></a></li>
-                    <li><a href="./pages/housing/cabins.html" class="category-link"><span class="lang-en">cabins / cabinas</span><span class="lang-es">cabinas</span></a></li>
-                    <li><a href="./pages/housing/landFarms.html" class="category-link"><span class="lang-en">land & farms</span><span class="lang-es">fincas y terrenos</span></a></li>
-                    <li><a href="./pages/housing/rentalsWanted.html" class="category-link"><span class="lang-en">rentals wanted</span><span class="lang-es">busco alquiler</span></a></li>
-                    <li><a href="./pages/housing/roomsShared.html" class="category-link"><span class="lang-en">rooms / shared</span><span class="lang-es">cuartos / compartido</span></a></li>
-                    <li><a href="./pages/housing/sublets.html" class="category-link"><span class="lang-en">sublets / temporary</span><span class="lang-es">subarriendo / temporal</span></a></li>
-                    <li><a href="./pages/housing/RealEstate.html" class="category-link"><span class="lang-en">real estate for sale</span><span class="lang-es">bienes raíces en venta</span></a></li>
-                    <li><a href="./pages/housing/vacationRentals.html" class="category-link"><span class="lang-en">vacation rentals</span><span class="lang-es">alquileres de vacaciones</span></a></li>
-                </ul>
+            <!-- Housing + Personals: one column on wide screens (see .category-stack in style.css) -->
+            <div class="category-stack">
+                <!-- Housing -->
+                <div class="category-block">
+                    <h3 class="category-title">
+                        <span class="lang-en">Housing</span>
+                        <span class="lang-es">Vivienda</span>
+                    </h3>
+                    <ul class="subcategory-list">
+                        <li><a href="./pages/housing/apartments.html" class="category-link"><span class="lang-en">apartments / housing</span><span class="lang-es">apartamentos / casas</span></a></li>
+                        <li><a href="./pages/housing/cabins.html" class="category-link"><span class="lang-en">cabins / cabinas</span><span class="lang-es">cabinas</span></a></li>
+                        <li><a href="./pages/housing/landFarms.html" class="category-link"><span class="lang-en">land & farms</span><span class="lang-es">fincas y terrenos</span></a></li>
+                        <li><a href="./pages/housing/rentalsWanted.html" class="category-link"><span class="lang-en">rentals wanted</span><span class="lang-es">busco alquiler</span></a></li>
+                        <li><a href="./pages/housing/roomsShared.html" class="category-link"><span class="lang-en">rooms / shared</span><span class="lang-es">cuartos / compartido</span></a></li>
+                        <li><a href="./pages/housing/sublets.html" class="category-link"><span class="lang-en">sublets / temporary</span><span class="lang-es">subarriendo / temporal</span></a></li>
+                        <li><a href="./pages/housing/RealEstate.html" class="category-link"><span class="lang-en">real estate for sale</span><span class="lang-es">bienes raíces en venta</span></a></li>
+                        <li><a href="./pages/housing/vacationRentals.html" class="category-link"><span class="lang-en">vacation rentals</span><span class="lang-es">alquileres de vacaciones</span></a></li>
+                    </ul>
+                </div>
+                <!-- Personals -->
+                <div class="category-block category-personals">
+                    <h3 class="category-title">
+                        <span class="lang-en">Personals</span>
+                        <span class="lang-es">Personales</span>
+                    </h3>
+                    <ul class="subcategory-list">
+                         <!-- Fixed paths --> 
+                        <li><a href="./pages/Personals/strictlyPlatonic.html" class="category-link"><span class="lang-en">strictly platonic</span><span class="lang-es">estrictamente platónico</span></a></li>
+                        <li><a href="./pages/Personals/womenSeekingMen.html" class="category-link"><span class="lang-en">women seek men</span><span class="lang-es">mujeres buscan hombres</span></a></li>
+                        <li><a href="./pages/Personals/menSeekingWomen.html" class="category-link"><span class="lang-en">men seek women</span><span class="lang-es">hombres buscan mujeres</span></a></li>
+                        <li><a href="./pages/Personals/menSeekingMen.html" class="category-link"><span class="lang-en">men seek men</span><span class="lang-es">hombres buscan hombres</span></a></li>
+                        <li><a href="./pages/Personals/womenSeekingWomen.html" class="category-link"><span class="lang-en">women seek women</span><span class="lang-es">mujeres buscan mujeres</span></a></li>
+                    </ul>
+                </div>
             </div>
 
             <!-- For Sale -->
@@ -169,21 +187,6 @@
                 </ul>
             </div>
 
-            <!-- Personals -->
-            <div class="category-block">
-                <h3 class="category-title">
-                    <span class="lang-en">Personals</span>
-                    <span class="lang-es">Personales</span>
-                </h3>
-                <ul class="subcategory-list">
-                     <!-- Fixed paths --> 
-                    <li><a href="./pages/Personals/strictlyPlatonic.html" class="category-link"><span class="lang-en">strictly platonic</span><span class="lang-es">estrictamente platónico</span></a></li>
-                    <li><a href="./pages/Personals/womenSeekingMen.html" class="category-link"><span class="lang-en">women seek men</span><span class="lang-es">mujeres buscan hombres</span></a></li>
-                    <li><a href="./pages/Personals/menSeekingWomen.html" class="category-link"><span class="lang-en">men seek women</span><span class="lang-es">hombres buscan mujeres</span></a></li>
-                    <li><a href="./pages/Personals/menSeekingMen.html" class="category-link"><span class="lang-en">men seek men</span><span class="lang-es">hombres buscan hombres</span></a></li>
-                    <li><a href="./pages/Personals/womenSeekingWomen.html" class="category-link"><span class="lang-en">women seek women</span><span class="lang-es">mujeres buscan mujeres</span></a></li>
-                </ul>
-            </div>
 
         </div>
 
