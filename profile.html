@@ -83,12 +83,24 @@
                         </div>
                         <div>
                             <label for="profile-phone" class="block text-sm font-medium text-gray-700">
-                                <span class="lang-en">Phone</span>
-                                <span class="lang-es">Teléfono</span>
+                                <span class="lang-en">Contact phone (ads)</span>
+                                <span class="lang-es">Teléfono de contacto (anuncios)</span>
                             </label>
                             <input type="tel" id="profile-phone" readonly
                                 class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">
                         </div>
+                        <div>
+                            <label for="profile-contact-email" class="block text-sm font-medium text-gray-700">
+                                <span class="lang-en">Contact email (ads)</span>
+                                <span class="lang-es">Correo de contacto (anuncios)</span>
+                            </label>
+                            <input type="email" id="profile-contact-email" readonly
+                                class="mt-1 block w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed">
+                        </div>
+                        <p id="contact-add-note" class="hidden text-xs text-gray-500">
+                            <span class="lang-en">You can add a missing contact once. After that, only support can change it.</span>
+                            <span class="lang-es">Puede agregar un contacto faltante una sola vez. Después, solo soporte puede cambiarlo.</span>
+                        </p>
                     </div>
                     <div class="mt-4 p-3 rounded-md bg-blue-50 border border-blue-100">
                         <p class="text-sm font-medium text-blue-900">
@@ -625,6 +637,93 @@
 
         // --- 4. Core Profile Logic ---
 
+        // --- Ad contact details: shown read-only; a missing one can be added once ---
+        const CONTACT_FIELDS = {
+            phone: { inputId: 'profile-phone', re: /^[+]?[0-9][0-9 ()-]{6,19}$/, placeholder: '8888-8888' },
+            contactEmail: { inputId: 'profile-contact-email', re: /^[^@ ]+@[^@ ]+[.][^@ ]+$/, placeholder: 'correo@ejemplo.com' },
+        };
+        const CONTACT_TEXT = {
+            en: {
+                save: 'Save',
+                invalid: { phone: 'Enter a valid phone (e.g. 8888-8888).', contactEmail: 'Enter a valid email.' },
+                confirm: (v) => `Save "${v}" as your ad contact? After this, only support can change it.`,
+                error: 'Could not save. Please try again.',
+            },
+            es: {
+                save: 'Guardar',
+                invalid: { phone: 'Ingrese un teléfono válido (ej. 8888-8888).', contactEmail: 'Ingrese un correo válido.' },
+                confirm: (v) => `¿Guardar "${v}" como contacto de sus anuncios? Después, solo soporte puede cambiarlo.`,
+                error: 'No se pudo guardar. Intente de nuevo.',
+            },
+        };
+
+        function lockContactInput(input) {
+            input.readOnly = true;
+            input.classList.add('bg-gray-100', 'cursor-not-allowed');
+            input.classList.remove('bg-white');
+            const btn = document.getElementById(input.id + '-save');
+            if (btn) btn.remove();
+        }
+
+        function setupContactFields(currentUser, userData) {
+            let anyMissing = false;
+            Object.keys(CONTACT_FIELDS).forEach((field) => {
+                const cfg = CONTACT_FIELDS[field];
+                const input = document.getElementById(cfg.inputId);
+                if (!input) return;
+                const value = typeof userData[field] === 'string' ? userData[field].trim() : '';
+                if (value) {
+                    input.value = value;
+                    lockContactInput(input);
+                    return;
+                }
+                anyMissing = true;
+                input.value = '';
+                input.readOnly = false;
+                input.placeholder = cfg.placeholder;
+                input.classList.remove('bg-gray-100', 'cursor-not-allowed');
+                input.classList.add('bg-white');
+                if (document.getElementById(input.id + '-save')) return;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = input.id + '-save';
+                btn.className = 'mt-2 px-3 py-1.5 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50';
+                btn.textContent = CONTACT_TEXT[currentLang === 'en' ? 'en' : 'es'].save;
+                btn.addEventListener('click', () => saveContactField(currentUser, field, input, btn));
+                input.insertAdjacentElement('afterend', btn);
+            });
+            const note = document.getElementById('contact-add-note');
+            if (note) note.classList.toggle('hidden', !anyMissing);
+        }
+
+        async function saveContactField(currentUser, field, input, btn) {
+            const text = CONTACT_TEXT[currentLang === 'en' ? 'en' : 'es'];
+            const value = input.value.trim();
+            if (!CONTACT_FIELDS[field].re.test(value)) {
+                alert(text.invalid[field]);
+                input.focus();
+                return;
+            }
+            if (!window.confirm(text.confirm(value))) return;
+            btn.disabled = true;
+            try {
+                // Firestore rules only allow filling an empty contact field, once
+                await db.collection('users').doc(currentUser.uid).set({ [field]: value }, { merge: true });
+                if (currentProfileUserData) currentProfileUserData[field] = value;
+                lockContactInput(input);
+                const stillMissing = Object.keys(CONTACT_FIELDS).some((f) => {
+                    const el = document.getElementById(CONTACT_FIELDS[f].inputId);
+                    return el && !el.readOnly;
+                });
+                const note = document.getElementById('contact-add-note');
+                if (note) note.classList.toggle('hidden', !stillMissing);
+            } catch (error) {
+                console.error('Could not save contact detail:', error);
+                alert(text.error);
+                btn.disabled = false;
+            }
+        }
+
         async function loadUserProfile(currentUser) {
             if (!currentUser || !db) return;
             currentProfileUser = currentUser;
@@ -637,14 +736,14 @@
                     currentProfileUserData = userData;
                     profileDisplayName.value = userData.displayName || currentUser.displayName || 'N/A';
                     profileName.value = userData.fullName || 'N/A';
-                    profilePhone.value = userData.phone || 'N/A';
+                    setupContactFields(currentUser, userData);
                     console.log("User profile data loaded:", userData);
                 } else {
                     currentProfileUserData = null;
                     console.warn("No user profile document found in Firestore for UID:", currentUser.uid);
                     profileDisplayName.value = currentUser.displayName || 'N/A';
                     profileName.value = 'N/A';
-                    profilePhone.value = 'N/A';
+                    setupContactFields(currentUser, {});
                 }
             } catch (error) {
                 console.error("Error fetching user profile:", error);

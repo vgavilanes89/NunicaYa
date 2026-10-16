@@ -57,6 +57,36 @@ const MAX_FIELDS = 60;
 const MAX_STRING_LENGTH = 10000;
 const MAX_ARRAY_LENGTH = 20;
 
+const CONTACT_METHODS = ["phone", "whatsapp", "email"];
+
+/**
+ * Ad contact details come from the account (users/{uid}.phone and .contactEmail, set at
+ * sign-up or added once on the profile page); the seller only picks which ones to show.
+ * Values sent by the browser are ignored.
+ */
+async function applyAccountContacts(listing, uid) {
+  const prefs = [...new Set((Array.isArray(listing.contactPreferences) ? listing.contactPreferences : [])
+    .filter((p) => CONTACT_METHODS.includes(p)))];
+  if (prefs.length === 0) {
+    throw new functions.https.HttpsError("invalid-argument", "contact_required");
+  }
+  const snap = await db.collection("users").doc(uid).get();
+  const profile = snap.exists ? snap.data() : {};
+  const phone = typeof profile.phone === "string" ? profile.phone.trim() : "";
+  const email = typeof profile.contactEmail === "string" ? profile.contactEmail.trim() : "";
+  const wantsPhone = prefs.includes("phone") || prefs.includes("whatsapp");
+  const wantsEmail = prefs.includes("email");
+  if (wantsPhone && !phone) {
+    throw new functions.https.HttpsError("failed-precondition", "contact_phone_missing");
+  }
+  if (wantsEmail && !email) {
+    throw new functions.https.HttpsError("failed-precondition", "contact_email_missing");
+  }
+  listing.contactPreferences = prefs;
+  listing.contactPhone = wantsPhone ? phone : "";
+  listing.contactEmail = wantsEmail ? email : "";
+}
+
 function requiredProducts(category, imageCount) {
   const products = [];
   if (category === "housing") products.push("housing_listing");
@@ -206,6 +236,7 @@ const getMyEntitlements = functions.https.onCall(async (data, context) => {
 const createListing = functions.https.onCall(async (data, context) => {
   const uid = await requireVerifiedAccount(context, "Sign in to post an ad.");
   const listing = sanitizeListingInput(data && data.listing, uid);
+  await applyAccountContacts(listing, uid);
   const hints = (data && data.payments && typeof data.payments === "object") ? data.payments : {};
   const needed = requiredProducts(listing.category, listing.imageUrls.length);
 

@@ -487,6 +487,7 @@
         document.getElementById('edit-display-name').value = user.displayName || '';
         document.getElementById('edit-full-name').value = user.fullName || '';
         document.getElementById('edit-phone').value = user.phone || '';
+        document.getElementById('edit-contact-email').value = user.contactEmail || '';
 
         const toggleBtn = document.getElementById('modal-toggle-user-btn');
         const deleteBtn = document.getElementById('modal-delete-user-btn');
@@ -630,6 +631,7 @@
                 displayName: document.getElementById('edit-display-name').value,
                 fullName: document.getElementById('edit-full-name').value,
                 phone: document.getElementById('edit-phone').value,
+                contactEmail: document.getElementById('edit-contact-email').value,
             });
             closeUserModal();
             await loadUsers();

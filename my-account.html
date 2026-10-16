@@ -147,14 +147,31 @@
                         </p>
                     </div>
 
-                    <!-- NEW: Phone Number -->
-                    <div>
-                        <label for="signup-phone" class="block text-sm font-medium text-gray-700 required-label">
-                            <span class="lang-en">Phone Number</span>
-                            <span class="lang-es">Número de Teléfono</span>
-                        </label>
-                        <input type="tel" id="signup-phone" name="signup-phone" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    </div>
+                    <!-- Ad contact details: at least one; saved to the account and locked -->
+                    <fieldset class="border border-gray-200 rounded-md p-3 space-y-3">
+                        <legend class="px-1 text-sm font-medium text-gray-700 required-label">
+                            <span class="lang-en">Contact for your ads</span>
+                            <span class="lang-es">Contacto para sus anuncios</span>
+                        </legend>
+                        <p class="text-xs text-gray-500">
+                            <span class="lang-en">Enter at least one. Buyers see it on your ads. You can add the other one later from your profile; once saved, only support can change it.</span>
+                            <span class="lang-es">Ingrese al menos uno. Los compradores lo verán en sus anuncios. Puede agregar el otro después desde su perfil; una vez guardado, solo soporte puede cambiarlo.</span>
+                        </p>
+                        <div>
+                            <label for="signup-phone" class="block text-sm font-medium text-gray-700">
+                                <span class="lang-en">Contact phone</span>
+                                <span class="lang-es">Teléfono de contacto</span>
+                            </label>
+                            <input type="tel" id="signup-phone" name="signup-phone" autocomplete="tel" placeholder="8888-8888" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="signup-contact-email" class="block text-sm font-medium text-gray-700">
+                                <span class="lang-en">Contact email</span>
+                                <span class="lang-es">Correo de contacto</span>
+                            </label>
+                            <input type="email" id="signup-contact-email" name="signup-contact-email" autocomplete="email" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </fieldset>
                     
                     <div>
                         <label for="signup-email" class="block text-sm font-medium text-gray-700 required-label">
@@ -229,6 +246,10 @@
         // --- NEW: Add Full Name and Phone ---
         const signupFullNameInput = document.getElementById('signup-full-name');
         const signupPhoneInput = document.getElementById('signup-phone');
+        const signupContactEmailInput = document.getElementById('signup-contact-email');
+        // Same formats the Firestore rules accept for users/{uid}.phone / .contactEmail
+        const CONTACT_PHONE_RE = /^[+]?[0-9][0-9 ()-]{6,19}$/;
+        const CONTACT_EMAIL_RE = /^[^@ ]+@[^@ ]+[.][^@ ]+$/;
         
         const signupPasswordInput = document.getElementById('signup-password');
         const signupPasswordConfirmInput = document.getElementById('signup-password-confirm');
@@ -326,7 +347,9 @@
                     'password-mismatch': 'Passwords do not match.',
                     'name-required': 'Please enter your display name.', // NEW
                     'fullname-required': 'Please enter your full name.', // NEW
-                    'phone-required': 'Please enter your phone number.', // NEW
+                    'phone-required': 'Enter a contact phone or email for your ads.',
+                    'invalid-contact-phone': 'Enter a valid contact phone (e.g. 8888-8888 or +506 8888-8888).',
+                    'invalid-contact-email': 'Enter a valid contact email.',
                     'signup-success': 'Account created! We sent you an email to verify your address.',
                     'login-success': 'Login successful! Redirecting...',
                     'reset-email-sent': 'Password reset email sent! Check your inbox.',
@@ -343,7 +366,9 @@
                     'password-mismatch': 'Las contraseñas no coinciden.',
                     'name-required': 'Por favor ingrese su nombre para mostrar.', // NEW
                     'fullname-required': 'Por favor ingrese su nombre completo.', // NEW
-                    'phone-required': 'Por favor ingrese su número de teléfono.', // NEW
+                    'phone-required': 'Ingrese un teléfono o correo de contacto para sus anuncios.',
+                    'invalid-contact-phone': 'Ingrese un teléfono de contacto válido (ej. 8888-8888 o +506 8888-8888).',
+                    'invalid-contact-email': 'Ingrese un correo de contacto válido.',
                     'signup-success': '¡Cuenta creada! Le enviamos un correo para verificar su dirección.',
                     'login-success': '¡Ingreso exitoso! Redirigiendo...',
                     'reset-email-sent': '¡Correo de reenvío de contraseña enviado! Revise su bandeja de entrada.',
@@ -390,11 +415,24 @@
                 return;
             }
 
-            // --- NEW: Validate Phone ---
-            if (!phone) {
+            // Ad contact: at least one of phone / email, well-formed
+            const contactEmail = signupContactEmailInput.value.trim();
+            if (!phone && !contactEmail) {
                 displayMessage(signupMessageArea, 'phone-required', 'error');
                 signupButton.disabled = false;
                 signupPhoneInput.focus();
+                return;
+            }
+            if (phone && !CONTACT_PHONE_RE.test(phone)) {
+                displayMessage(signupMessageArea, 'invalid-contact-phone', 'error');
+                signupButton.disabled = false;
+                signupPhoneInput.focus();
+                return;
+            }
+            if (contactEmail && !CONTACT_EMAIL_RE.test(contactEmail)) {
+                displayMessage(signupMessageArea, 'invalid-contact-email', 'error');
+                signupButton.disabled = false;
+                signupContactEmailInput.focus();
                 return;
             }
 
@@ -416,13 +454,16 @@
                 // --- End NEW ---
 
                 // Optional: Create a user doc in Firestore (if needed for other data)
-                 await db.collection("users").doc(userCredential.user.uid).set({
+                 const profile = {
                      email: userCredential.user.email,
                      createdAt: firebase.firestore.Timestamp.now(),
-                     displayName: displayName, // Save it in Firestore too
-                     fullName: fullName, // NEW
-                     phone: phone // NEW
-                 });
+                     displayName: displayName,
+                     fullName: fullName,
+                 };
+                 // Ad contact details (locked once saved; see firestore.rules)
+                 if (phone) profile.phone = phone;
+                 if (contactEmail) profile.contactEmail = contactEmail;
+                 await db.collection("users").doc(userCredential.user.uid).set(profile);
 
                 // Posting ads and referral points need a verified email
                 if (window.NunciaYaEmailVerification) {

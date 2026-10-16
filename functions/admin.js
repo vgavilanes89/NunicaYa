@@ -251,6 +251,7 @@ const adminListUsers = functions.https.onCall(async (data, context) => {
           displayName: prof.displayName || authUser.displayName || null,
           fullName: prof.fullName || null,
           phone: prof.phone || null,
+          contactEmail: prof.contactEmail || null,
           createdAt: authUser.metadata.creationTime,
           lastSignIn: authUser.metadata.lastSignInTime,
           lastActiveAt: serializeTimestamp(prof.lastActiveAt),
@@ -288,6 +289,7 @@ const adminUpdateUser = functions.https.onCall(async (data, context) => {
   if (data.displayName != null) updates.displayName = String(data.displayName).trim();
   if (data.fullName != null) updates.fullName = String(data.fullName).trim();
   if (data.phone != null) updates.phone = String(data.phone).trim();
+  if (data.contactEmail != null) updates.contactEmail = String(data.contactEmail).trim();
   if (data.email != null) updates.email = String(data.email).trim();
 
   if (Object.keys(updates).length === 0) {

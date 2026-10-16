@@ -292,25 +292,20 @@
                      <span class="lang-en">Contact Information</span>
                      <span class="lang-es">Información de Contacto</span>
                  </h3>
-                 <p class="text-xs text-gray-500 mb-2">
-                    <span class="lang-en">Provide at least one contact method.</span>
-                    <span class="lang-es">Proporcione al menos un método de contacto.</span>
-                 </p>
-                 <div class="space-y-2">
-                     <div>
-                         <label for="contactPhone" class="block text-sm font-medium text-gray-700">
-                             <span class="lang-en">Contact Phone</span>
-                             <span class="lang-es">Teléfono de Contacto</span>
-                         </label>
-                         <input type="tel" id="contactPhone" name="contactPhone" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                     </div>
-                      <div>
-                         <label for="contactEmail" class="block text-sm font-medium text-gray-700">
-                             <span class="lang-en">Contact Email</span>
-                             <span class="lang-es">Correo de Contacto</span>
-                         </label>
-                         <input type="email" id="contactEmail" name="contactEmail" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                     </div>
+                 <!-- Contact details come from the account; sellers only choose which to show -->
+                 <div class="rounded-md bg-gray-50 border border-gray-200 p-3 text-sm space-y-1">
+                     <p>
+                         <span class="lang-en">Phone:</span><span class="lang-es">Teléfono:</span>
+                         <strong id="account-contact-phone" class="ml-1">…</strong>
+                     </p>
+                     <p>
+                         <span class="lang-en">Email:</span><span class="lang-es">Correo:</span>
+                         <strong id="account-contact-email" class="ml-1">…</strong>
+                     </p>
+                     <p class="text-xs text-gray-500">
+                         <span class="lang-en">These come from your account. Add a missing one on your <a href="profile.html" class="text-blue-600 hover:underline">profile</a>; to change one, contact support.</span>
+                         <span class="lang-es">Vienen de su cuenta. Agregue uno faltante en su <a href="profile.html" class="text-blue-600 hover:underline">perfil</a>; para cambiarlo, contacte a soporte.</span>
+                     </p>
                  </div>
 
                  <!-- Contact Preferences --> 
@@ -433,8 +428,8 @@
         const postAdForm = document.getElementById('post-ad-form');
         const messageArea = document.getElementById('message-area');
         const submitButton = document.getElementById('submit-button');
-        const contactPhoneInput = document.getElementById('contactPhone');
-        const contactEmailInput = document.getElementById('contactEmail');
+        // Ad contact details from users/{uid} (phone, contactEmail); see loadAccountContacts()
+        let accountContacts = { phone: '', email: '' };
         const imageInput = document.getElementById('images');
         const imagePreviewContainer = document.getElementById('image-preview-container');
         const uploadProgressArea = document.getElementById('upload-progress-area');
@@ -1811,7 +1806,9 @@
                      'required-fields': 'Please fill out all required fields (*).',
                      'bilingual-title-required': 'Please provide an Ad Title in at least one language.',
                      'bilingual-desc-required': 'Please provide a Description in at least one language.',
-                     'contact-required': 'Please provide either a phone number or an email address.',
+                     'contact-required': 'Add a contact phone or email to your account (profile page) before posting.',
+                     'contact_phone_missing': 'Your account has no contact phone. Add one on your profile page.',
+                     'contact_email_missing': 'Your account has no contact email. Add one on your profile page.',
                      'contact-pref-required': 'Please select at least one contact method.', // New message
                      'max-5-images': 'Maximum 5 images allowed.',
                      'max-5-images-total': (d) => `You can only have ${d.total} images total. You already have ${d.existing}, so you can only add ${d.new} more.`,
@@ -1849,7 +1846,9 @@
                       'required-fields': 'Por favor complete todos los campos requeridos (*).',
                      'bilingual-title-required': 'Por favor proporcione un Título en al menos un idioma.',
                      'bilingual-desc-required': 'Por favor proporcione una Descripción en al menos un idioma.',
-                     'contact-required': 'Por favor proporcione un número de teléfono o una dirección de correo.',
+                     'contact-required': 'Agregue un teléfono o correo de contacto a su cuenta (página de perfil) antes de publicar.',
+                     'contact_phone_missing': 'Su cuenta no tiene teléfono de contacto. Agréguelo en su perfil.',
+                     'contact_email_missing': 'Su cuenta no tiene correo de contacto. Agréguelo en su perfil.',
                      'contact-pref-required': 'Por favor seleccione al menos un método de contacto.', // New message
                      'max-5-images': 'Se permiten máximo 5 imágenes.',
                      'max-5-images-total': (d) => `Solo puede tener ${d.total} imágenes en total. Ya tiene ${d.existing}, así que solo puede agregar ${d.new} más.`,
@@ -1935,6 +1934,34 @@
             notice.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        /** Loads the account's contact details and enables only the matching checkboxes. */
+        async function loadAccountContacts(user) {
+            try {
+                const snap = await db.collection('users').doc(user.uid).get();
+                const data = snap.exists ? snap.data() : {};
+                accountContacts = {
+                    phone: typeof data.phone === 'string' ? data.phone.trim() : '',
+                    email: typeof data.contactEmail === 'string' ? data.contactEmail.trim() : '',
+                };
+            } catch (err) {
+                console.error('Could not load account contact details:', err);
+            }
+            applyContactAvailability();
+        }
+
+        function applyContactAvailability() {
+            const missing = currentLang === 'en' ? 'Not added' : 'No agregado';
+            document.getElementById('account-contact-phone').textContent = accountContacts.phone || missing;
+            document.getElementById('account-contact-email').textContent = accountContacts.email || missing;
+            [[prefPhone, accountContacts.phone], [prefWhatsApp, accountContacts.phone], [prefEmail, accountContacts.email]]
+                .forEach(([box, value]) => {
+                    box.disabled = !value;
+                    if (!value) box.checked = false;
+                    const row = box.closest('.flex');
+                    if (row) row.classList.toggle('opacity-50', !value);
+                });
+        }
+
         async function handlePostAd(event) {
             event.preventDefault();
             messageArea.textContent = '';
@@ -1973,12 +2000,9 @@
                  displayMessage('bilingual-desc-required', 'error');
              }
 
-            // Contact Info
-            const phone = contactPhoneInput.value.trim();
-            const email = contactEmailInput.value.trim();
-            if (!phone && !email) {
+            // Contact Info: from the account (see loadAccountContacts)
+            if (!accountContacts.phone && !accountContacts.email) {
                  isValid = false;
-                 if (!firstInvalidElement) firstInvalidElement = contactPhoneInput;
                  displayMessage('contact-required');
             }
             
@@ -2082,8 +2106,9 @@
                  price: formattedPrice,
                  currency: priceValue ? currencyValue : null,
                  priceAmount: priceAmount,
-                 contactPhone: phone,
-                 contactEmail: email,
+                 // Server copies these from the account too (createListing / firestore.rules)
+                 contactPhone: (isPrefPhone || isPrefWhatsApp) ? accountContacts.phone : '',
+                 contactEmail: isPrefEmail ? accountContacts.email : '',
                  contactPreferences: [
                      ...(isPrefPhone ? ['phone'] : []),
                      ...(isPrefWhatsApp ? ['whatsapp'] : []),
@@ -2202,6 +2227,8 @@
                      extraImagesUnlocked = false;
                      updateImageLimitLabel();
                      showPaywallModal('extra_images');
+                 } else if (error && /^contact_(phone|email)_missing$/.test(error.message || '')) {
+                     displayMessage(error.message, 'error');
                  } else if (error && (error.message === 'email_not_verified'
                      || (error.details && error.details.reason === 'email_not_verified'))) {
                      emailVerifiedForPosting = false;
@@ -2247,8 +2274,6 @@
                  titleEsInput.value = ad.title_es || '';
                  descriptionEnInput.value = ad.description_en || '';
                  descriptionEsInput.value = ad.description_es || '';
-                 contactPhoneInput.value = ad.contactPhone || '';
-                 contactEmailInput.value = ad.contactEmail || '';
                 
                  // Parse price
                  if (ad.price) {
@@ -2264,6 +2289,7 @@
                      prefWhatsApp.checked = ad.contactPreferences.includes('whatsapp');
                      prefEmail.checked = ad.contactPreferences.includes('email');
                  }
+                 applyContactAvailability(); // untick methods the account no longer has
 
                  // --- 3. Populate Categories & Filters (Sequential) ---
                  populateCategories();
@@ -2422,6 +2448,7 @@
                                      populateProvinces(); 
                                  }
                                  
+                                 await loadAccountContacts(user);
                                  if (editMode) {
                                      pageTitle.querySelector('.lang-en').textContent = 'Edit Your Ad';
                                      pageTitle.querySelector('.lang-es').textContent = 'Editar Su Anuncio';
