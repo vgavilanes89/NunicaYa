@@ -423,3 +423,7 @@ const listings = require("./listings");
 exports.createListing = listings.createListing;
 exports.applyExtraImagesToListing = listings.applyExtraImagesToListing;
 exports.getMyEntitlements = listings.getMyEntitlements;
+
+// === 12. SELF-SERVICE ACCOUNT DELETION ===
+const accountDeletion = require("./account-deletion");
+exports.deleteMyAccount = accountDeletion.deleteMyAccount;

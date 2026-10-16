@@ -5,6 +5,12 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
+const {
+  collectStorageDeletePromises,
+  deleteListingFavorites,
+  deleteUserAccount,
+} = require("./account-deletion");
+
 const db = admin.firestore();
 
 const ONLINE_WINDOW_MS = 15 * 60 * 1000;
@@ -39,72 +45,6 @@ async function assertCanModifyUser(adminUid, targetUserId) {
       "failed-precondition",
       "Admin accounts cannot be deactivated or deleted from here.",
     );
-  }
-}
-
-async function deleteUserListings(userId) {
-  const listingsSnap = await db.collection("listings").where("userId", "==", userId).get();
-  if (listingsSnap.empty) return 0;
-
-  const batchSize = 400;
-  let deleted = 0;
-  const docs = listingsSnap.docs;
-  for (let i = 0; i < docs.length; i += batchSize) {
-    const batch = db.batch();
-    docs.slice(i, i + batchSize).forEach((doc) => batch.delete(doc.ref));
-    await batch.commit();
-    deleted += Math.min(batchSize, docs.length - i);
-  }
-  return deleted;
-}
-
-async function deleteUserFavorites(userId) {
-  const favSnap = await db.collection("users").doc(userId).collection("favorites").get();
-  if (favSnap.empty) return;
-
-  const batch = db.batch();
-  favSnap.docs.forEach((doc) => batch.delete(doc.ref));
-  await batch.commit();
-}
-
-function collectStorageDeletePromises(imageUrls) {
-  const promises = [];
-  if (!Array.isArray(imageUrls) || imageUrls.length === 0) return promises;
-
-  const storage = admin.storage();
-  imageUrls.forEach((url) => {
-    try {
-      const decodedUrl = decodeURIComponent(url);
-      const path = decodedUrl.split("/o/")[1].split("?")[0];
-      if (path) {
-        promises.push(storage.bucket().file(path).delete());
-      }
-    } catch (e) {
-      console.warn(`Could not parse storage URL to delete: ${url}`, e.message);
-    }
-  });
-  return promises;
-}
-
-async function deleteListingFavorites(listingId) {
-  try {
-    const snap = await db.collectionGroup("favorites")
-      .where(admin.firestore.FieldPath.documentId(), "==", listingId)
-      .get();
-    if (snap.empty) return 0;
-
-    const batchSize = 400;
-    let deleted = 0;
-    for (let i = 0; i < snap.docs.length; i += batchSize) {
-      const batch = db.batch();
-      snap.docs.slice(i, i + batchSize).forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
-      deleted += Math.min(batchSize, snap.docs.length - i);
-    }
-    return deleted;
-  } catch (e) {
-    console.warn("deleteListingFavorites skipped:", e.message);
-    return 0;
   }
 }
 
@@ -507,16 +447,8 @@ const adminSetUserDisabled = functions.https.onCall(async (data, context) => {
   }
 });
 
-async function deleteUserAccount(userId) {
-  const deletedListings = await deleteUserListings(userId);
-  await deleteUserFavorites(userId);
-  await db.collection("users").doc(userId).delete();
-  await admin.auth().deleteUser(userId);
-  return { userId, deletedListings };
-}
-
 /**
- * Permanently delete a user: listings, favorites, profile, and Auth account.
+ * Permanently delete a user (see account-deletion.js for what is removed and kept).
  */
 const adminDeleteUser = functions.https.onCall(async (data, context) => {
   const adminUid = await assertAdmin(context);

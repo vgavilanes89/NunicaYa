@@ -120,6 +120,11 @@
                         <span class="lang-en">Logout</span>
                         <span class="lang-es">Cerrar Sesión</span>
                     </button>
+                    <button type="button" id="delete-account-button"
+                        class="mt-4 w-full text-sm text-red-700 hover:underline">
+                        <span class="lang-en">Delete my account</span>
+                        <span class="lang-es">Eliminar mi cuenta</span>
+                    </button>
                 </div>
             </div>
 
@@ -282,6 +287,59 @@
         </div>
     </div>
 
+
+    <!-- Delete account modal -->
+    <div id="delete-account-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" role="dialog" aria-labelledby="delete-account-title">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-start gap-4">
+                <h3 id="delete-account-title" class="text-lg font-medium text-red-700">
+                    <span class="lang-en">Delete your account</span>
+                    <span class="lang-es">Eliminar su cuenta</span>
+                </h3>
+                <button type="button" id="delete-account-close" class="text-gray-400 hover:text-gray-600 text-2xl leading-none" aria-label="Close">&times;</button>
+            </div>
+            <form id="delete-account-form" class="p-6 space-y-4" novalidate>
+                <div class="text-sm text-gray-700 space-y-2">
+                    <p>
+                        <span class="lang-en">This permanently deletes your account, all your ads and their photos, your favorites and your profile. It cannot be undone.</span>
+                        <span class="lang-es">Esto elimina permanentemente su cuenta, todos sus anuncios y sus fotos, sus favoritos y su perfil. No se puede deshacer.</span>
+                    </p>
+                    <p class="text-xs text-gray-500">
+                        <span class="lang-en">Records of payments you made are kept for accounting.</span>
+                        <span class="lang-es">Los registros de pagos realizados se conservan por motivos contables.</span>
+                    </p>
+                </div>
+                <div>
+                    <label for="delete-account-password" class="block text-sm font-medium text-gray-700">
+                        <span class="lang-en">Enter your password to confirm</span>
+                        <span class="lang-es">Ingrese su contraseña para confirmar</span>
+                    </label>
+                    <input type="password" id="delete-account-password" autocomplete="current-password" required
+                        class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500">
+                </div>
+                <label class="flex items-start gap-2 text-sm text-gray-700">
+                    <input type="checkbox" id="delete-account-confirm" class="mt-1">
+                    <span>
+                        <span class="lang-en">I understand my account and ads will be deleted permanently.</span>
+                        <span class="lang-es">Entiendo que mi cuenta y mis anuncios se eliminarán permanentemente.</span>
+                    </span>
+                </label>
+                <div id="delete-account-message" class="text-sm text-center hidden"></div>
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2">
+                    <button type="button" id="delete-account-cancel"
+                        class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <span class="lang-en">Cancel</span>
+                        <span class="lang-es">Cancelar</span>
+                    </button>
+                    <button type="submit" id="delete-account-submit"
+                        class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="lang-en">Delete account</span>
+                        <span class="lang-es">Eliminar cuenta</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Main Application Script -->
     <script src="config.js"></script>
@@ -1011,6 +1069,100 @@
             }
         }
 
+        // --- Self-service account deletion (deleteMyAccount Cloud Function) ---
+        const deleteAccountModal = document.getElementById('delete-account-modal');
+        const deleteAccountForm = document.getElementById('delete-account-form');
+        const deleteAccountPassword = document.getElementById('delete-account-password');
+        const deleteAccountConfirm = document.getElementById('delete-account-confirm');
+        const deleteAccountSubmit = document.getElementById('delete-account-submit');
+        const deleteAccountMessage = document.getElementById('delete-account-message');
+
+        const DELETE_ACCOUNT_TEXT = {
+            en: {
+                confirm: 'Tick the box to confirm.',
+                password: 'Enter your password.',
+                wrongPassword: 'Incorrect password.',
+                tooMany: 'Too many attempts. Please wait a few minutes and try again.',
+                noPassword: 'This account has no password. Contact support to delete it.',
+                admin: 'Admin accounts must be removed by another admin.',
+                working: 'Deleting your account…',
+                done: 'Your account has been deleted.',
+                error: 'Could not delete the account. Please try again.',
+            },
+            es: {
+                confirm: 'Marque la casilla para confirmar.',
+                password: 'Ingrese su contraseña.',
+                wrongPassword: 'Contraseña incorrecta.',
+                tooMany: 'Demasiados intentos. Espere unos minutos e intente de nuevo.',
+                noPassword: 'Esta cuenta no tiene contraseña. Contacte a soporte para eliminarla.',
+                admin: 'Las cuentas de administrador deben ser eliminadas por otro administrador.',
+                working: 'Eliminando su cuenta…',
+                done: 'Su cuenta ha sido eliminada.',
+                error: 'No se pudo eliminar la cuenta. Intente de nuevo.',
+            },
+        };
+
+        /** isError: true (red), false (green, success) or null (neutral, in progress). */
+        function showDeleteAccountMessage(key, isError) {
+            const dict = DELETE_ACCOUNT_TEXT[currentLang === 'en' ? 'en' : 'es'];
+            deleteAccountMessage.textContent = dict[key] || dict.error;
+            deleteAccountMessage.classList.remove('hidden', 'text-red-600', 'text-green-700', 'text-gray-600');
+            const color = isError === false ? 'text-green-700' : (isError === null ? 'text-gray-600' : 'text-red-600');
+            deleteAccountMessage.classList.add(color);
+        }
+
+        function openDeleteAccountModal() {
+            deleteAccountForm.reset();
+            deleteAccountMessage.classList.add('hidden');
+            deleteAccountSubmit.disabled = false;
+            deleteAccountModal.classList.remove('hidden');
+            deleteAccountModal.classList.add('flex');
+            deleteAccountPassword.focus();
+        }
+
+        function closeDeleteAccountModal() {
+            deleteAccountModal.classList.add('hidden');
+            deleteAccountModal.classList.remove('flex');
+        }
+
+        async function handleDeleteAccount(event) {
+            event.preventDefault();
+            const user = auth && auth.currentUser;
+            if (!user) return;
+            if (!deleteAccountConfirm.checked) return showDeleteAccountMessage('confirm');
+            if (!deleteAccountPassword.value) return showDeleteAccountMessage('password');
+            if (!user.providerData.some((p) => p.providerId === 'password')) return showDeleteAccountMessage('noPassword');
+
+            deleteAccountSubmit.disabled = true;
+            showDeleteAccountMessage('working', null);
+            try {
+                // A fresh sign-in is required; the server rejects stale sessions
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, deleteAccountPassword.value);
+                await user.reauthenticateWithCredential(credential);
+                await user.getIdToken(true);
+                await firebase.functions().httpsCallable('deleteMyAccount')({});
+
+                localStorage.removeItem('nunciaya-user-session');
+                try { await auth.signOut(); } catch (e) { /* user already deleted */ }
+                showDeleteAccountMessage('done', false);
+                setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+            } catch (error) {
+                console.error('Account deletion failed:', error);
+                const code = String((error && error.code) || '');
+                const msg = String((error && error.message) || '');
+                if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+                    showDeleteAccountMessage('wrongPassword');
+                } else if (code === 'auth/too-many-requests') {
+                    showDeleteAccountMessage('tooMany');
+                } else if (msg.indexOf('Admin accounts') !== -1) {
+                    showDeleteAccountMessage('admin');
+                } else {
+                    showDeleteAccountMessage('error');
+                }
+                deleteAccountSubmit.disabled = false;
+            }
+        }
+
         async function handleLogout() {
             if (!auth) { console.error("Firebase Auth not ready."); return; }
             try {
@@ -1072,6 +1224,13 @@
                             }
                         });
                         logoutButton.addEventListener('click', handleLogout);
+                        document.getElementById('delete-account-button').addEventListener('click', openDeleteAccountModal);
+                        document.getElementById('delete-account-close').addEventListener('click', closeDeleteAccountModal);
+                        document.getElementById('delete-account-cancel').addEventListener('click', closeDeleteAccountModal);
+                        deleteAccountForm.addEventListener('submit', handleDeleteAccount);
+                        deleteAccountModal.addEventListener('click', (e) => {
+                            if (e.target === deleteAccountModal) closeDeleteAccountModal();
+                        });
                         contactSupportButton.addEventListener('click', openSupportModal);
                         supportModalClose.addEventListener('click', closeSupportModal);
                         supportCancelBtn.addEventListener('click', closeSupportModal);

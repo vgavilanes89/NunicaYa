@@ -96,12 +96,27 @@ service cloud.firestore {
     }
 
     // User data: only the signed-in user can read/write their own (referral stats server-only)
+    // Profiles: name, full name and phone are set once at sign-up; after that only admins
+    // change them (adminUpdateUser), so a verified account can't later take on someone else's
+    // identity. Users may refresh lastActiveAt/email (app.js presence); referral stats are
+    // server-only.
+    function signupFields() {
+      return ['email', 'createdAt', 'displayName', 'fullName', 'phone', 'lastActiveAt'];
+    }
+    function emailMatchesAccount(data) {
+      return !data.keys().hasAny(['email']) || data.email == request.auth.token.get('email', null);
+    }
     match /users/{userId} {
       allow read: if isAccount() && request.auth.uid == userId;
       allow create: if isAccount() && request.auth.uid == userId
-        && !request.resource.data.keys().hasAny(['referralPoints', 'referralCount', 'referredBy']);
+        && request.resource.data.keys().hasOnly(signupFields())
+        && emailMatchesAccount(request.resource.data);
       allow update: if isAccount() && request.auth.uid == userId
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['referralPoints', 'referralCount', 'referredBy']);
+        && emailMatchesAccount(request.resource.data)
+        && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt', 'email'])
+          // sign-up's profile write can land after the first presence write
+          || (!resource.data.keys().hasAny(['displayName', 'fullName', 'phone'])
+            && request.resource.data.keys().hasOnly(signupFields())));
     }
     // User favorites subcollection (required for favorites to load on search/category pages)
     match /users/{userId}/favorites/{favoriteId} {
