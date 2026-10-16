@@ -403,17 +403,45 @@ const adminUpsertPromoCode = functions.https.onCall(async (data, context) => {
     );
   }
 
-  const discountPercent = Math.min(100, Math.max(0, Number(data.discountPercent) || 0));
-  const productTypes = Array.isArray(data.productTypes) ? data.productTypes : ["housing_listing"];
+  if (!/^[A-Z0-9_-]{3,30}$/.test(code)) {
+    throw new functions.https.HttpsError("invalid-argument", "Code: 3–30 letters, numbers, - or _.");
+  }
+  const discountPercent = Number(data.discountPercent);
+  if (!Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 100) {
+    throw new functions.https.HttpsError("invalid-argument", "Discount must be 1–100%.");
+  }
+  const productTypes = [...new Set(normalizeProductTypes(data.productTypes))]
+    .filter((t) => t === "housing_listing" || t === "extra_images");
+  if (productTypes.length === 0) {
+    throw new functions.https.HttpsError("invalid-argument", "Choose at least one product.");
+  }
+  // Empty / null = unlimited
+  const optionalLimit = (v, name) => {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Math.floor(Number(v));
+    if (!Number.isFinite(n) || n < 1) {
+      throw new functions.https.HttpsError("invalid-argument", `${name} must be a positive number or empty.`);
+    }
+    return n;
+  };
+  let expiresAt = null;
+  if (data.expiresAt) {
+    const ms = Number(data.expiresAt);
+    if (!Number.isFinite(ms) || ms <= Date.now()) {
+      throw new functions.https.HttpsError("invalid-argument", "Expiry must be in the future.");
+    }
+    expiresAt = admin.firestore.Timestamp.fromMillis(ms);
+  }
 
   await db.collection("promo-codes").doc(code).set({
     code,
-    label: data.label || code,
+    label: String(data.label || code).trim().slice(0, 100),
     discountPercent,
     productTypes,
     active: data.active !== false,
-    maxUses: data.maxUses != null ? Number(data.maxUses) : null,
-    maxUsesPerUser: data.maxUsesPerUser != null ? Number(data.maxUsesPerUser) : 1,
+    maxUses: optionalLimit(data.maxUses, "Max uses"),
+    maxUsesPerUser: optionalLimit(data.maxUsesPerUser, "Max uses per user"),
+    expiresAt,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedBy: context.auth.uid,
   }, { merge: true });

@@ -106,7 +106,10 @@ function listingToAlgoliaObject(data, objectID) {
   Object.keys(derived).forEach((k) => {
     if (derived[k] != null) out[k] = derived[k];
   });
-  if (out.publicVisibleUntilSeconds == null) {
+  if (data.suspended === true) {
+    // Owner deactivated by an admin: keep the record but out of every public search
+    out.publicVisibleUntilSeconds = 0;
+  } else if (out.publicVisibleUntilSeconds == null) {
     if (out.expiresAtSeconds != null) {
       out.publicVisibleUntilSeconds = out.expiresAtSeconds;
     } else if (data.status === "sold") {
@@ -395,6 +398,8 @@ exports.adminDeleteUsers = adminApi.adminDeleteUsers;
 exports.adminUpdateListing = adminApi.adminUpdateListing;
 exports.adminDeleteListing = adminApi.adminDeleteListing;
 exports.adminUpdateHelpRequest = adminApi.adminUpdateHelpRequest;
+exports.adminSearchListings = adminApi.adminSearchListings;
+exports.adminSetEmailVerified = adminApi.adminSetEmailVerified;
 
 // === 8. PAYMENTS (Stripe Checkout) ===
 const payments = require("./payments");
@@ -427,3 +432,7 @@ exports.getMyEntitlements = listings.getMyEntitlements;
 // === 12. SELF-SERVICE ACCOUNT DELETION ===
 const accountDeletion = require("./account-deletion");
 exports.deleteMyAccount = accountDeletion.deleteMyAccount;
+
+// === 13. MAINTENANCE ===
+const maintenance = require("./maintenance");
+exports.cleanupAnonymousUsers = maintenance.cleanupAnonymousUsers;

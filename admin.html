@@ -87,9 +87,9 @@
                         <p id="stat-online-users" class="text-2xl font-bold text-indigo-600">—</p>
                     </div>
                     <div class="stat-card bg-white rounded-lg shadow border p-4">
-                        <p class="text-xs text-gray-500 uppercase">Revenue</p>
+                        <p class="text-xs text-gray-500 uppercase">Revenue (live)</p>
                         <p id="stat-revenue" class="text-2xl font-bold text-emerald-600">—</p>
-                        <p class="text-xs text-gray-400"><span id="stat-paid-count">0</span> paid</p>
+                        <p class="text-xs text-gray-400"><span id="stat-paid-count">0</span> paid (incl. free codes)</p>
                     </div>
                     <div class="stat-card bg-white rounded-lg shadow border p-4">
                         <p class="text-xs text-gray-500 uppercase">New ads (7d)</p>
@@ -148,6 +148,7 @@
                         disabled>Delete selected (0)</button>
                     <button type="button" id="refresh-users" class="px-3 py-2 border rounded-md text-sm hover:bg-gray-50">Refresh</button>
                 </div>
+                <p id="users-anon-note" class="text-xs text-gray-500"></p>
                 <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
                     <div id="users-table"></div>
                 </div>
@@ -155,15 +156,29 @@
             </div>
 
             <!-- Listings -->
-            <div data-admin-panel="listings" class="hidden">
+            <div data-admin-panel="listings" class="hidden space-y-4">
+                <form id="listings-search-form" class="flex flex-wrap gap-3 items-center">
+                    <input type="search" id="listings-search" placeholder="Listing ID, owner email or owner UID (empty = newest 100)"
+                        class="flex-grow max-w-lg border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <select id="listings-status" class="border border-gray-300 rounded-md px-2 py-2 text-sm">
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="pending">Pending</option>
+                        <option value="sold">Sold</option>
+                        <option value="suspended">Suspended (owner deactivated)</option>
+                    </select>
+                    <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">Search</button>
+                </form>
                 <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
-                    <p class="text-sm text-gray-500 mb-3">Change status inline, or use <strong>Delete</strong> to remove a post immediately (photos and search index included). Sold ads otherwise follow the 48h visibility rule.</p>
+                    <p class="text-sm text-gray-500 mb-3">Change status inline, or use <strong>Delete</strong> to remove a post immediately (photos and search index included). Sold ads otherwise follow the 48h visibility rule. Ads of deactivated users are suspended automatically.</p>
+                    <p id="listings-result-info" class="text-xs text-gray-500 mb-2"></p>
                     <div id="listings-table"></div>
                 </div>
             </div>
 
             <!-- Payments -->
             <div data-admin-panel="payments" class="hidden">
+                <p class="text-sm text-gray-500 mb-3">Latest 25 payment records. "Test" rows are from Stripe test mode and aren't counted in revenue. "Used for" links the ad each payment paid for.</p>
                 <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
                     <div id="payments-table"></div>
                 </div>
@@ -171,13 +186,45 @@
 
             <!-- Promo codes -->
             <div data-admin-panel="promos" class="hidden space-y-4">
-                <div class="flex flex-wrap gap-3 items-center">
-                    <button type="button" id="seed-promo-codes" class="hidden px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
-                        Seed default codes
-                    </button>
-                    <button type="button" id="refresh-promos" class="px-3 py-2 border rounded-md text-sm hover:bg-gray-50">Refresh</button>
-                    <p class="text-sm text-gray-500">There are no built-in codes. The old demo codes are permanently disabled; create new codes with different names.</p>
-                </div>
+                <form id="promo-form" class="bg-white rounded-lg shadow border p-5 space-y-3" novalidate>
+                    <div class="flex items-center justify-between gap-2">
+                        <h2 class="font-semibold" id="promo-form-title">New promo code</h2>
+                        <button type="button" id="promo-form-reset" class="text-sm text-gray-600 hover:underline">Clear form</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                        <label class="block">Code
+                            <input type="text" id="promo-code" maxlength="30" placeholder="SUMMER25" class="mt-1 w-full border rounded-md px-3 py-2 uppercase font-mono">
+                        </label>
+                        <label class="block">Discount %
+                            <input type="number" id="promo-discount" min="1" max="100" placeholder="25" class="mt-1 w-full border rounded-md px-3 py-2">
+                        </label>
+                        <label class="block">Max uses (total)
+                            <input type="number" id="promo-max-uses" min="1" placeholder="Unlimited" class="mt-1 w-full border rounded-md px-3 py-2">
+                        </label>
+                        <label class="block">Max uses per user
+                            <input type="number" id="promo-max-per-user" min="1" placeholder="Unlimited" class="mt-1 w-full border rounded-md px-3 py-2">
+                        </label>
+                        <label class="block sm:col-span-2">Label (internal note)
+                            <input type="text" id="promo-label" maxlength="100" placeholder="25% off housing, summer campaign" class="mt-1 w-full border rounded-md px-3 py-2">
+                        </label>
+                        <label class="block">Expires (optional)
+                            <input type="date" id="promo-expires" class="mt-1 w-full border rounded-md px-3 py-2">
+                        </label>
+                        <div>
+                            <span class="block">Applies to</span>
+                            <label class="mt-2 flex items-center gap-2"><input type="checkbox" id="promo-housing" value="housing_listing"> Housing fee ($5)</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="promo-photos" value="extra_images"> Extra photos ($2)</label>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="promo-active" checked> Active</label>
+                        <div class="flex gap-3">
+                            <button type="button" id="refresh-promos" class="px-3 py-2 border rounded-md text-sm hover:bg-gray-50">Refresh list</button>
+                            <button type="submit" id="promo-save" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50">Save code</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500">100% codes are redeemed without Stripe. The old demo codes (published in the repo) are permanently disabled; use different names.</p>
+                </form>
                 <div class="bg-white rounded-lg shadow border p-5 overflow-x-auto">
                     <div id="promos-table"></div>
                 </div>
@@ -207,8 +254,12 @@
             <input type="hidden" id="edit-user-id">
             <div class="space-y-3">
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Email (read-only)</label>
+                    <label class="block text-sm text-gray-600 mb-1">Login email (read-only)</label>
                     <input type="email" id="edit-user-email" readonly class="w-full border rounded-md px-3 py-2 bg-gray-100 text-sm">
+                    <p class="mt-1 text-xs flex items-center gap-2">
+                        <span id="edit-email-verified"></span>
+                        <button type="button" id="mark-email-verified-btn" class="hidden text-blue-600 hover:underline">Mark as verified</button>
+                    </p>
                 </div>
                 <div>
                     <label class="block text-sm text-gray-600 mb-1">Display name</label>
@@ -226,6 +277,7 @@
                     <label class="block text-sm text-gray-600 mb-1">Contact email (ads)</label>
                     <input type="email" id="edit-contact-email" class="w-full border rounded-md px-3 py-2 text-sm">
                 </div>
+                <p class="text-xs text-gray-500">Changing a contact detail also updates it on this user's existing ads.</p>
             </div>
             <div class="mt-5 border-t border-gray-200 pt-4">
                 <div class="flex items-center justify-between gap-2 mb-2">
@@ -276,6 +328,6 @@
             if (window.setLang) window.setLang(window.getPreferredLang ? window.getPreferredLang() : 'es');
         });
     </script>
-    <script src="js/admin-dashboard.js?v=2"></script>
+    <script src="js/admin-dashboard.js?v=3"></script>
 </body>
 </html>

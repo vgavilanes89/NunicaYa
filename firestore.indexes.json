@@ -17,6 +17,15 @@
       ]
     },
     {
+      "collectionGroup": "payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "livemode", "order": "ASCENDING" },
+        { "fieldPath": "productType", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "promo-redemptions",
       "queryScope": "COLLECTION",
       "fields": [

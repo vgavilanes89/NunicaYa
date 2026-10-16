@@ -22,6 +22,7 @@
     };
 
     let currentUserPromoRedemptions = [];
+    let promoCache = [];
 
     let currentLang = 'es';
     let functionsApi = null;
@@ -131,22 +132,30 @@
             return;
         }
         const rows = listings.map((l) => {
+            const suspendedBadge = l.suspended
+                ? ` <span class="ml-1 text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700">${t('suspended', 'suspendido')}</span>`
+                : '';
             const statusCell = compact
-                ? (l.status || '—')
-                : `<select class="listing-status-select border rounded px-1 py-0.5 text-sm" data-id="${l.id}">
+                ? escapeHtml(l.status || '—') + suspendedBadge
+                : `<select class="listing-status-select border rounded px-1 py-0.5 text-sm" data-id="${escapeHtml(l.id)}">
                     <option value="active" ${l.status === 'active' ? 'selected' : ''}>active</option>
                     <option value="pending" ${l.status === 'pending' ? 'selected' : ''}>pending</option>
                     <option value="sold" ${l.status === 'sold' ? 'selected' : ''}>sold</option>
-                   </select>`;
+                   </select>${suspendedBadge}`;
             const actionsCell = compact
                 ? ''
                 : `<td class="py-2 whitespace-nowrap">
                     <button type="button" class="delete-listing-btn text-red-600 hover:underline text-sm"
                         data-id="${escapeHtml(l.id)}" data-title="${escapeHtml(l.title || l.id)}">${t('Delete', 'Borrar')}</button>
                    </td>`;
+            const ownerCell = compact ? '' : `<td class="py-2 pr-2 text-sm">${l.userId
+                ? `<button type="button" class="owner-listings-btn text-blue-600 hover:underline" data-uid="${escapeHtml(l.userId)}">${escapeHtml(l.ownerEmail || l.userId.slice(0, 10) + '…')}</button>`
+                : '—'}</td>`;
+            const categoryText = CATEGORY_LABELS[l.category] ? CATEGORY_LABELS[l.category][currentLang] : (l.category || '—');
             return `<tr class="border-b border-gray-100 hover:bg-gray-50" data-listing-id="${escapeHtml(l.id)}">
-                <td class="py-2 pr-2"><a href="pages/listing/detail.html?id=${l.id}" class="text-blue-600 hover:underline" target="_blank">${escapeHtml(l.title || l.id)}</a></td>
-                <td class="py-2 pr-2 text-sm">${escapeHtml(l.category || '—')}</td>
+                <td class="py-2 pr-2"><a href="pages/listing/detail.html?id=${encodeURIComponent(l.id)}" class="text-blue-600 hover:underline" target="_blank" rel="noopener">${escapeHtml(l.title || l.id)}</a></td>
+                <td class="py-2 pr-2 text-sm">${escapeHtml(categoryText)}${l.subCategory ? `<span class="text-gray-400"> / ${escapeHtml(l.subCategory)}</span>` : ''}</td>
+                ${ownerCell}
                 <td class="py-2 pr-2 text-sm">${escapeHtml(l.price || '—')}</td>
                 <td class="py-2 pr-2 text-sm">${statusCell}</td>
                 <td class="py-2 text-sm text-gray-500">${fmtDate(l.createdAt)}</td>
@@ -157,6 +166,7 @@
         el.innerHTML = `<table class="min-w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
             <th class="py-2 pr-2">${t('Title', 'Título')}</th>
             <th class="py-2 pr-2">${t('Category', 'Categoría')}</th>
+            ${compact ? '' : `<th class="py-2 pr-2">${t('Owner', 'Dueño')}</th>`}
             <th class="py-2 pr-2">${t('Price', 'Precio')}</th>
             <th class="py-2 pr-2">${t('Status', 'Estado')}</th>
             <th class="py-2">${t('Created', 'Creado')}</th>
@@ -172,6 +182,9 @@
                     deleteListing(btn.dataset.id, btn.dataset.title).catch(console.error);
                 });
             });
+            el.querySelectorAll('.owner-listings-btn').forEach((btn) => {
+                btn.addEventListener('click', () => showListingsFor(btn.dataset.uid));
+            });
         }
     }
 
@@ -182,16 +195,30 @@
             el.innerHTML = `<p class="text-gray-500 text-sm">${t('No payments yet.', 'Aún no hay pagos.')}</p>`;
             return;
         }
-        const rows = payments.map((p) => `<tr class="border-b border-gray-100">
-            <td class="py-2 pr-2 text-xs font-mono">${escapeHtml((p.id || '').slice(0, 14))}…</td>
-            <td class="py-2 pr-2 text-sm">${PRODUCT_LABELS[p.productType] || p.productType || '—'}</td>
-            <td class="py-2 pr-2 text-sm">${fmtMoney(p.amountCents, p.currency)}</td>
-            <td class="py-2 pr-2 text-sm"><span class="${p.status === 'paid' ? 'text-green-600' : 'text-yellow-600'}">${p.status}</span></td>
+        const rows = payments.map((p) => {
+            const mode = p.livemode
+                ? ''
+                : ` <span class="text-xs px-1 rounded bg-gray-200 text-gray-600">${t('test', 'prueba')}</span>`;
+            const source = p.source === 'promo_free'
+                ? `${t('Free code', 'Código gratis')} ${escapeHtml(p.promoCode || '')}`
+                : (p.promoCode ? `Stripe · ${escapeHtml(p.promoCode)}` : 'Stripe');
+            const usedFor = p.consumedByListingId
+                ? `<a href="pages/listing/detail.html?id=${encodeURIComponent(p.consumedByListingId)}" target="_blank" rel="noopener" class="text-blue-600 hover:underline">${t('ad', 'anuncio')}</a>`
+                : (p.status === 'paid' ? `<span class="text-amber-600">${t('unused', 'sin usar')}</span>` : '—');
+            return `<tr class="border-b border-gray-100">
+            <td class="py-2 pr-2 text-sm">${escapeHtml(p.userEmail || (p.userId ? p.userId.slice(0, 10) + '…' : '—'))}</td>
+            <td class="py-2 pr-2 text-sm">${escapeHtml(PRODUCT_LABELS[p.productType] || p.productType || '—')}</td>
+            <td class="py-2 pr-2 text-sm">${fmtMoney(p.amountCents, p.currency)}${mode}</td>
+            <td class="py-2 pr-2 text-xs text-gray-600">${source}</td>
+            <td class="py-2 pr-2 text-sm"><span class="${p.status === 'paid' ? 'text-green-600' : 'text-yellow-600'}">${escapeHtml(p.status || '—')}</span></td>
+            <td class="py-2 pr-2 text-sm">${usedFor}</td>
             <td class="py-2 text-sm text-gray-500">${fmtDate(p.paidAt || p.createdAt)}</td>
-        </tr>`).join('');
+        </tr>`;
+        }).join('');
         el.innerHTML = `<table class="min-w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
-            <th class="py-2 pr-2">ID</th><th class="py-2 pr-2">${t('Product', 'Producto')}</th>
-            <th class="py-2 pr-2">${t('Amount', 'Monto')}</th><th class="py-2 pr-2">${t('Status', 'Estado')}</th>
+            <th class="py-2 pr-2">${t('User', 'Usuario')}</th><th class="py-2 pr-2">${t('Product', 'Producto')}</th>
+            <th class="py-2 pr-2">${t('Amount', 'Monto')}</th><th class="py-2 pr-2">${t('Source', 'Origen')}</th>
+            <th class="py-2 pr-2">${t('Status', 'Estado')}</th><th class="py-2 pr-2">${t('Used for', 'Usado en')}</th>
             <th class="py-2">${t('Date', 'Fecha')}</th>
         </tr></thead><tbody>${rows}</tbody></table>`;
     }
@@ -235,7 +262,7 @@
         const q = filter.toLowerCase();
         const filtered = usersCache.filter((u) => {
             if (!q) return true;
-            return [u.email, u.displayName, u.fullName, u.phone, u.uid].some((v) =>
+            return [u.email, u.displayName, u.fullName, u.phone, u.contactEmail, u.uid].some((v) =>
                 String(v || '').toLowerCase().includes(q));
         });
 
@@ -278,10 +305,14 @@
             return `<tr class="border-b border-gray-100 hover:bg-gray-50 ${u.disabled ? 'bg-red-50/40' : ''} ${selectedUserIds.has(u.uid) ? 'bg-blue-50/40' : ''}">
             ${checkboxCell}
             <td class="py-2 pr-2 text-xs font-mono">${escapeHtml(u.uid.slice(0, 10))}…</td>
-            <td class="py-2 pr-2 text-sm">${escapeHtml(u.email || '—')}</td>
+            <td class="py-2 pr-2 text-sm">${escapeHtml(u.email || '—')}${u.emailVerified
+                ? ` <span title="${t('Email verified', 'Correo verificado')}" class="text-green-600">✓</span>`
+                : ` <span title="${t('Email not verified', 'Correo sin verificar')}" class="text-xs text-amber-600">${t('unverified', 'sin verificar')}</span>`}</td>
             <td class="py-2 pr-2 text-sm">${escapeHtml(u.displayName || '—')}</td>
             <td class="py-2 pr-2 text-sm"><span class="font-medium ${statusClass}">${statusLabel}</span></td>
-            <td class="py-2 pr-2 text-sm text-center">${u.listingCount}</td>
+            <td class="py-2 pr-2 text-sm text-center">${u.listingCount
+                ? `<button type="button" class="user-listings-btn text-blue-600 hover:underline" data-uid="${escapeHtml(u.uid)}">${u.listingCount}</button>`
+                : '0'}</td>
             <td class="py-2 pr-2 text-sm text-center font-medium text-blue-700">${u.referralPoints != null ? u.referralPoints : 0}</td>
             <td class="py-2 pr-2 text-sm text-gray-500">${fmtDate(u.lastActiveAt)}</td>
             <td class="py-2 whitespace-nowrap">${actionBtns}</td>
@@ -332,6 +363,9 @@
         el.querySelectorAll('.edit-user-btn').forEach((btn) => {
             btn.addEventListener('click', () => openUserModal(btn.dataset.uid));
         });
+        el.querySelectorAll('.user-listings-btn').forEach((btn) => {
+            btn.addEventListener('click', () => showListingsFor(btn.dataset.uid));
+        });
         el.querySelectorAll('.toggle-user-btn').forEach((btn) => {
             btn.addEventListener('click', () => toggleUserDisabled(btn.dataset.uid, btn.dataset.disabled === '1'));
         });
@@ -351,19 +385,31 @@
             el.innerHTML = `<p class="text-gray-500">${t('No support requests.', 'No hay solicitudes de soporte.')}</p>`;
             return;
         }
-        const rows = requests.map((r) => `<tr class="border-b border-gray-100 align-top">
-            <td class="py-2 pr-2 text-sm">${escapeHtml(r.name || '—')}<br><span class="text-gray-500 text-xs">${escapeHtml(r.email || '')}</span></td>
+        const rows = requests.map((r) => {
+            const msg = r.message || '';
+            const messageCell = msg.length > 120
+                ? `<details><summary class="cursor-pointer">${escapeHtml(msg.slice(0, 120))}… <span class="text-blue-600">${t('more', 'más')}</span></summary><p class="mt-1 whitespace-pre-wrap">${escapeHtml(msg)}</p></details>`
+                : `<p class="whitespace-pre-wrap">${escapeHtml(msg)}</p>`;
+            const subject = encodeURIComponent(`NunciaYa: ${r.topicLabel || r.topic || 'Soporte'}`);
+            const links = [
+                r.email ? `<a href="mailto:${encodeURIComponent(r.email)}?subject=${subject}" class="text-blue-600 hover:underline">${t('Reply', 'Responder')}</a>` : '',
+                r.phone ? `<a href="https://wa.me/${escapeHtml(String(r.phone).replace(/[^0-9]/g, ''))}" target="_blank" rel="noopener" class="text-green-700 hover:underline">WhatsApp</a>` : '',
+                r.userId ? `<button type="button" class="help-open-user text-blue-600 hover:underline" data-uid="${escapeHtml(r.userId)}">${t('User', 'Usuario')}</button>` : '',
+            ].filter(Boolean).join(' · ');
+            return `<tr class="border-b border-gray-100 align-top">
+            <td class="py-2 pr-2 text-sm">${escapeHtml(r.name || '—')}<br><span class="text-gray-500 text-xs">${escapeHtml(r.email || '')}${r.phone ? ' · ' + escapeHtml(r.phone) : ''}</span><br><span class="text-xs">${links}</span></td>
             <td class="py-2 pr-2 text-sm">${escapeHtml(r.topicLabel || r.topic || '—')}</td>
-            <td class="py-2 pr-2 text-sm max-w-xs">${escapeHtml((r.message || '').slice(0, 120))}${(r.message || '').length > 120 ? '…' : ''}</td>
+            <td class="py-2 pr-2 text-sm max-w-md">${messageCell}</td>
             <td class="py-2 pr-2 text-sm">
-                <select class="help-status-select border rounded px-1 py-0.5" data-id="${r.id}">
+                <select class="help-status-select border rounded px-1 py-0.5" data-id="${escapeHtml(r.id)}">
                     <option value="new" ${r.status === 'new' ? 'selected' : ''}>new</option>
                     <option value="in_review" ${r.status === 'in_review' ? 'selected' : ''}>in_review</option>
                     <option value="resolved" ${r.status === 'resolved' ? 'selected' : ''}>resolved</option>
                 </select>
             </td>
             <td class="py-2 text-sm text-gray-500">${fmtDate(r.submittedAt)}</td>
-        </tr>`).join('');
+        </tr>`;
+        }).join('');
         el.innerHTML = `<table class="min-w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
             <th class="py-2 pr-2">${t('User', 'Usuario')}</th>
             <th class="py-2 pr-2">${t('Subject', 'Asunto')}</th>
@@ -375,6 +421,18 @@
         el.querySelectorAll('.help-status-select').forEach((sel) => {
             sel.addEventListener('change', () => updateHelpStatus(sel.dataset.id, sel.value));
         });
+        el.querySelectorAll('.help-open-user').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (usersCache.some((u) => u.uid === btn.dataset.uid)) {
+                    openUserModal(btn.dataset.uid);
+                } else {
+                    switchTab('users');
+                    const search = document.getElementById('users-search');
+                    if (search) search.value = btn.dataset.uid;
+                    renderUsersTable(usersCache);
+                }
+            });
+        });
     }
 
     function escapeHtml(str) {
@@ -382,7 +440,8 @@
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     function promoProductLabel(productType) {
@@ -488,6 +547,18 @@
         document.getElementById('edit-full-name').value = user.fullName || '';
         document.getElementById('edit-phone').value = user.phone || '';
         document.getElementById('edit-contact-email').value = user.contactEmail || '';
+        const verifiedEl = document.getElementById('edit-email-verified');
+        const markVerifiedBtn = document.getElementById('mark-email-verified-btn');
+        if (verifiedEl) {
+            verifiedEl.textContent = user.emailVerified
+                ? t('✓ Email verified', '✓ Correo verificado')
+                : t('Email not verified — this user cannot post yet.', 'Correo sin verificar — aún no puede publicar.');
+            verifiedEl.className = user.emailVerified ? 'text-green-700' : 'text-amber-700';
+        }
+        if (markVerifiedBtn) {
+            markVerifiedBtn.classList.toggle('hidden', !!user.emailVerified || user.isAdmin || user.uid === currentAdminUid);
+            markVerifiedBtn.dataset.uid = uid;
+        }
 
         const toggleBtn = document.getElementById('modal-toggle-user-btn');
         const deleteBtn = document.getElementById('modal-delete-user-btn');
@@ -509,24 +580,42 @@
         show(document.getElementById('user-modal'), true);
     }
 
+    async function markEmailVerified(userId) {
+        if (!confirm(t(
+            'Mark this email as verified? Only do this if you confirmed the address another way.',
+            '¿Marcar este correo como verificado? Hágalo solo si confirmó la dirección de otra forma.',
+        ))) return;
+        try {
+            await callFn('adminSetEmailVerified', { userId });
+            closeUserModal();
+            await loadUsers();
+            showToast(t('Email marked as verified.', 'Correo marcado como verificado.'));
+        } catch (err) {
+            console.error(err);
+            alert(err.message || t('Action failed.', 'La acción falló.'));
+        }
+    }
+
     function closeUserModal() {
         show(document.getElementById('user-modal'), false);
     }
 
     async function toggleUserDisabled(userId, currentlyDisabled) {
-        const action = currentlyDisabled
-            ? t('activate this user', 'activar este usuario')
-            : t('deactivate this user', 'desactivar este usuario');
-        if (!confirm(t(`Are you sure you want to ${action}?`, `¿Está seguro que desea ${action}?`))) {
+        const question = currentlyDisabled
+            ? t('Activate this user? Their ads become visible again.', '¿Activar este usuario? Sus anuncios vuelven a ser visibles.')
+            : t('Deactivate this user? They are signed out and their ads are hidden from the site until reactivated.',
+                '¿Desactivar este usuario? Se cerrará su sesión y sus anuncios se ocultarán hasta reactivarlo.');
+        if (!confirm(question)) {
             return;
         }
         try {
-            await callFn('adminSetUserDisabled', { userId, disabled: !currentlyDisabled });
+            const result = await callFn('adminSetUserDisabled', { userId, disabled: !currentlyDisabled });
             closeUserModal();
             await loadUsers();
+            const n = (result && result.listingsAffected) || 0;
             showToast(currentlyDisabled
-                ? t('User activated.', 'Usuario activado.')
-                : t('User deactivated.', 'Usuario desactivado.'));
+                ? t(`User activated (${n} ads restored).`, `Usuario activado (${n} anuncios restaurados).`)
+                : t(`User deactivated (${n} ads hidden).`, `Usuario desactivado (${n} anuncios ocultos).`));
         } catch (err) {
             console.error(err);
             alert(err.message || t('Action failed.', 'La acción falló.'));
@@ -626,7 +715,7 @@
         const btn = document.getElementById('save-user-btn');
         btn.disabled = true;
         try {
-            await callFn('adminUpdateUser', {
+            const result = await callFn('adminUpdateUser', {
                 userId,
                 displayName: document.getElementById('edit-display-name').value,
                 fullName: document.getElementById('edit-full-name').value,
@@ -635,10 +724,13 @@
             });
             closeUserModal();
             await loadUsers();
-            showToast(t('User updated.', 'Usuario actualizado.'));
+            const n = (result && result.listingsUpdated) || 0;
+            showToast(n
+                ? t(`User updated (${n} ads updated).`, `Usuario actualizado (${n} anuncios actualizados).`)
+                : t('User updated.', 'Usuario actualizado.'));
         } catch (err) {
             console.error(err);
-            alert(t('Failed to update user.', 'Error al actualizar usuario.'));
+            alert(err.message || t('Failed to update user.', 'Error al actualizar usuario.'));
         } finally {
             btn.disabled = false;
         }
@@ -648,7 +740,7 @@
         try {
             await callFn('adminUpdateListing', { listingId, status });
             showToast(t('Listing updated.', 'Anuncio actualizado.'));
-            await loadStats();
+            await Promise.all([loadStats(), searchListings()]);
         } catch (err) {
             console.error(err);
             alert(t('Failed to update listing.', 'Error al actualizar anuncio.'));
@@ -666,7 +758,7 @@
         try {
             await callFn('adminDeleteListing', { listingId });
             showToast(t('Listing deleted.', 'Anuncio eliminado.'));
-            await loadStats();
+            await Promise.all([loadStats(), searchListings()]);
         } catch (err) {
             console.error(err);
             alert(err.message || t('Failed to delete listing.', 'Error al eliminar anuncio.'));
@@ -696,32 +788,127 @@
         const data = await callFn('getAdminStats');
         dashboardData = data;
         renderOverview(data);
-        renderListingsTable('listings-table', data.recentListings, false);
         renderPaymentsTable('payments-table', data.payments.recent);
         renderOnlineTable('online-table', data.onlineUsers);
         renderHelpTable(data.helpRequests.recent);
+    }
+
+    // ---------- Listings search ----------
+    async function searchListings() {
+        const el = document.getElementById('listings-table');
+        const info = document.getElementById('listings-result-info');
+        const query = (document.getElementById('listings-search') || {}).value || '';
+        const status = (document.getElementById('listings-status') || {}).value || '';
+        if (el) el.innerHTML = `<p class="text-gray-500">${t('Loading…', 'Cargando…')}</p>`;
+        try {
+            const data = await callFn('adminSearchListings', { query: query.trim(), status });
+            renderListingsTable('listings-table', data.listings, false);
+            if (info) {
+                info.textContent = query.trim()
+                    ? t(`${data.listings.length} result(s) for "${query.trim()}".`, `${data.listings.length} resultado(s) para "${query.trim()}".`)
+                    : t(`Newest ${data.listings.length} listings.`, `Los ${data.listings.length} anuncios más recientes.`);
+            }
+        } catch (err) {
+            console.error(err);
+            if (el) el.innerHTML = `<p class="text-red-600">${t('Search failed.', 'La búsqueda falló.')}</p>`;
+        }
+    }
+
+    function showListingsFor(uid) {
+        switchTab('listings');
+        const input = document.getElementById('listings-search');
+        const status = document.getElementById('listings-status');
+        if (input) input.value = uid;
+        if (status) status.value = '';
+        searchListings().catch(console.error);
+    }
+
+    // ---------- Promo codes ----------
+    function resetPromoForm() {
+        const form = document.getElementById('promo-form');
+        if (!form) return;
+        form.reset();
+        document.getElementById('promo-active').checked = true;
+        document.getElementById('promo-code').readOnly = false;
+        setText('promo-form-title', t('New promo code', 'Nuevo código'));
+    }
+
+    function editPromo(code) {
+        const c = promoCache.find((x) => (x.code || x.id) === code);
+        if (!c) return;
+        document.getElementById('promo-code').value = c.code || c.id;
+        document.getElementById('promo-code').readOnly = true;
+        document.getElementById('promo-discount').value = c.discountPercent || '';
+        document.getElementById('promo-max-uses').value = c.maxUses != null ? c.maxUses : '';
+        document.getElementById('promo-max-per-user').value = c.maxUsesPerUser != null ? c.maxUsesPerUser : '';
+        document.getElementById('promo-label').value = c.label || '';
+        document.getElementById('promo-expires').value = c.expiresAt ? new Date(c.expiresAt).toISOString().slice(0, 10) : '';
+        const products = c.productTypes || [];
+        document.getElementById('promo-housing').checked = products.includes('housing_listing');
+        document.getElementById('promo-photos').checked = products.includes('extra_images');
+        document.getElementById('promo-active').checked = c.active !== false;
+        setText('promo-form-title', t(`Edit ${c.code || c.id}`, `Editar ${c.code || c.id}`));
+        document.getElementById('promo-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function savePromo(event) {
+        event.preventDefault();
+        const btn = document.getElementById('promo-save');
+        const productTypes = ['promo-housing', 'promo-photos']
+            .map((id) => document.getElementById(id))
+            .filter((cb) => cb.checked)
+            .map((cb) => cb.value);
+        const expires = document.getElementById('promo-expires').value;
+        const payload = {
+            code: document.getElementById('promo-code').value.trim().toUpperCase(),
+            discountPercent: Number(document.getElementById('promo-discount').value),
+            maxUses: document.getElementById('promo-max-uses').value || null,
+            maxUsesPerUser: document.getElementById('promo-max-per-user').value || null,
+            label: document.getElementById('promo-label').value.trim(),
+            // End of the chosen day, Costa Rica time (UTC-6)
+            expiresAt: expires ? Date.parse(`${expires}T23:59:59-06:00`) : null,
+            productTypes,
+            active: document.getElementById('promo-active').checked,
+        };
+        btn.disabled = true;
+        try {
+            await callFn('adminUpsertPromoCode', payload);
+            showToast(t(`Saved ${payload.code}.`, `${payload.code} guardado.`));
+            resetPromoForm();
+            await loadPromos();
+        } catch (err) {
+            console.error(err);
+            alert(err.message || t('Could not save the code.', 'No se pudo guardar el código.'));
+        } finally {
+            btn.disabled = false;
+        }
     }
 
     function renderPromosTable(codes) {
         const el = document.getElementById('promos-table');
         if (!el) return;
         if (!codes || !codes.length) {
-            el.innerHTML = `<p class="text-gray-500">${t('No promo codes yet. Click "Seed default codes".', 'Sin códigos. Haga clic en "Seed default codes".')}</p>`;
+            el.innerHTML = `<p class="text-gray-500">${t('No promo codes yet. Create one with the form above.', 'Sin códigos. Cree uno con el formulario de arriba.')}</p>`;
             return;
         }
+        promoCache = codes;
         const rows = codes.map((c) => {
-            const products = (c.productTypes || []).join(', ');
+            const products = (c.productTypes || []).map(promoProductLabel).join(', ');
+            const expiry = c.expiresAt ? new Date(c.expiresAt).toLocaleDateString(currentLang === 'es' ? 'es-CR' : 'en-US') : '—';
+            const perUser = c.maxUsesPerUser != null ? c.maxUsesPerUser : '∞';
             const status = c.retired
                 ? t('Retired', 'Retirado')
                 : (c.active === false ? t('Inactive', 'Inactivo') : t('Active', 'Activo'));
             const uses = `${c.useCount || 0}${c.maxUses != null ? ` / ${c.maxUses}` : ''}`;
             return `<tr class="border-b border-gray-100 text-sm">
-                <td class="py-2 pr-4 font-mono font-semibold">${c.code || c.id}</td>
-                <td class="py-2 pr-4">${c.discountPercent}%</td>
-                <td class="py-2 pr-4">${products}</td>
-                <td class="py-2 pr-4">${uses}</td>
+                <td class="py-2 pr-4 font-mono font-semibold">${escapeHtml(c.code || c.id)}</td>
+                <td class="py-2 pr-4">${escapeHtml(c.discountPercent)}%</td>
+                <td class="py-2 pr-4">${escapeHtml(products)}</td>
+                <td class="py-2 pr-4">${escapeHtml(uses)} <span class="text-gray-400">(${escapeHtml(perUser)}/${t('user', 'usuario')})</span></td>
+                <td class="py-2 pr-4">${escapeHtml(expiry)}</td>
                 <td class="py-2 pr-4">${status}</td>
-                <td class="py-2 text-gray-500">${c.label || '—'}</td>
+                <td class="py-2 pr-4 text-gray-500">${escapeHtml(c.label || '—')}</td>
+                <td class="py-2">${c.retired ? '' : `<button type="button" class="edit-promo-btn text-blue-600 hover:underline" data-code="${escapeHtml(c.code || c.id)}">${t('Edit', 'Editar')}</button>`}</td>
             </tr>`;
         }).join('');
         el.innerHTML = `<table class="w-full text-left">
@@ -730,11 +917,16 @@
                 <th class="pb-2 pr-4">Off</th>
                 <th class="pb-2 pr-4">Products</th>
                 <th class="pb-2 pr-4">Uses</th>
+                <th class="pb-2 pr-4">Expires</th>
                 <th class="pb-2 pr-4">Status</th>
-                <th class="pb-2">Label</th>
+                <th class="pb-2 pr-4">Label</th>
+                <th class="pb-2"></th>
             </tr></thead>
             <tbody>${rows}</tbody>
         </table>`;
+        el.querySelectorAll('.edit-promo-btn').forEach((btn) => {
+            btn.addEventListener('click', () => editPromo(btn.dataset.code));
+        });
     }
 
     async function loadPromos() {
@@ -744,26 +936,18 @@
         renderPromosTable(data.codes || []);
     }
 
-    async function seedPromoCodes() {
-        const btn = document.getElementById('seed-promo-codes');
-        if (btn) btn.disabled = true;
-        try {
-            const data = await callFn('adminSeedPromoCodes');
-            showToast(t(`Created ${data.created}, skipped ${data.skipped}.`, `Creados ${data.created}, omitidos ${data.skipped}.`));
-            await loadPromos();
-        } catch (err) {
-            console.error(err);
-            alert(t('Failed to seed promo codes.', 'Error al crear códigos.'));
-        } finally {
-            if (btn) btn.disabled = false;
-        }
-    }
-
     async function loadUsers(pageToken) {
         const el = document.getElementById('users-table');
         if (el) el.innerHTML = `<p class="text-gray-500">${t('Loading users…', 'Cargando usuarios…')}</p>`;
         const data = await callFn('adminListUsers', { limit: 200, pageToken: pageToken || null });
         renderUsersTable(data.users);
+        const anonNote = document.getElementById('users-anon-note');
+        if (anonNote) {
+            anonNote.textContent = data.anonymousSkipped
+                ? t(`Hidden: ${data.anonymousSkipped} anonymous browsing sessions (not accounts; old ones are deleted daily).`,
+                    `Ocultas: ${data.anonymousSkipped} sesiones anónimas de navegación (no son cuentas; las antiguas se borran a diario).`)
+                : '';
+        }
         const moreBtn = document.getElementById('load-more-users');
         if (moreBtn) {
             moreBtn.classList.toggle('hidden', !data.nextPageToken);
@@ -771,6 +955,9 @@
         }
     }
 
+    let adminLoaded = false;
+
+    /** Waits for Firebase Auth to restore the session, then checks admins/{uid}. */
     function checkAdminAndLoad() {
         const loading = document.getElementById('admin-loading');
         const denied = document.getElementById('admin-denied');
@@ -785,29 +972,35 @@
         const db = window.firestoreDbInstance;
         functionsApi = firebase.functions();
 
-        if (!auth.currentUser) {
-            show(loading, false);
-            show(denied, true);
-            return;
-        }
-
-        currentAdminUid = auth.currentUser.uid;
-        db.collection('admins').doc(currentAdminUid).get().then((doc) => {
-            show(loading, false);
-            if (!doc.exists) {
+        auth.onAuthStateChanged((user) => {
+            if (!user || user.isAnonymous) {
+                show(loading, false);
+                show(dashboard, false);
                 show(denied, true);
                 return;
             }
-            show(dashboard, true);
-            loadStats().catch((err) => {
-                console.error('getAdminStats failed:', err);
-                alert(t('Error loading dashboard.', 'Error al cargar el panel.'));
+            currentAdminUid = user.uid;
+            db.collection('admins').doc(user.uid).get().then((doc) => {
+                show(loading, false);
+                if (!doc.exists) {
+                    show(denied, true);
+                    return;
+                }
+                show(denied, false);
+                show(dashboard, true);
+                if (adminLoaded) return;
+                adminLoaded = true;
+                loadStats().catch((err) => {
+                    console.error('getAdminStats failed:', err);
+                    alert(t('Error loading dashboard.', 'Error al cargar el panel.'));
+                });
+                loadUsers().catch((err) => console.error('adminListUsers failed:', err));
+                searchListings().catch((err) => console.error('adminSearchListings failed:', err));
+            }).catch((err) => {
+                console.error('Admin check failed:', err);
+                show(loading, false);
+                show(denied, true);
             });
-            loadUsers().catch((err) => console.error('adminListUsers failed:', err));
-        }).catch((err) => {
-            console.error('Admin check failed:', err);
-            show(loading, false);
-            show(denied, true);
         });
     }
 
@@ -835,8 +1028,19 @@
             loadPromos().catch(console.error);
         });
 
-        document.getElementById('seed-promo-codes')?.addEventListener('click', () => {
-            seedPromoCodes().catch(console.error);
+        document.getElementById('promo-form')?.addEventListener('submit', (e) => {
+            savePromo(e).catch(console.error);
+        });
+        document.getElementById('promo-form-reset')?.addEventListener('click', resetPromoForm);
+        document.getElementById('listings-search-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            searchListings().catch(console.error);
+        });
+        document.getElementById('listings-status')?.addEventListener('change', () => {
+            searchListings().catch(console.error);
+        });
+        document.getElementById('mark-email-verified-btn')?.addEventListener('click', (e) => {
+            markEmailVerified(e.currentTarget.dataset.uid).catch(console.error);
         });
 
         document.getElementById('users-search')?.addEventListener('input', () => {

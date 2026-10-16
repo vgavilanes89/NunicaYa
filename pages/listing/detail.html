@@ -582,7 +582,8 @@
             console.log(`Fetching listing details for ID: ${id}`);
             const docRef = db.collection("listings").doc(id);
             const docSnap = await docRef.get();
-            if (docSnap.exists) {
+            // Ads of users deactivated by an admin are suspended: shown as not available
+            if (docSnap.exists && docSnap.data().suspended !== true) {
                 console.log("Document data:", docSnap.data());
                 return docSnap.data();
             } else {

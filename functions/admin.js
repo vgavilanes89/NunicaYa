@@ -4,6 +4,7 @@
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { AggregateField } = require("firebase-admin/firestore");
 
 const {
   collectStorageDeletePromises,
@@ -48,6 +49,36 @@ async function assertCanModifyUser(adminUid, targetUserId) {
   }
 }
 
+// Same formats the Firestore rules accept for users/{uid}.phone / .contactEmail
+const CONTACT_PHONE_RE = /^[+]?[0-9][0-9 ()-]{6,19}$/;
+const CONTACT_EMAIL_RE = /^[^@ ]+@[^@ ]+[.][^@ ]+$/;
+
+async function runInChunks(items, size, fn) {
+  const out = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(...await Promise.all(items.slice(i, i + size).map(fn)));
+  }
+  return out;
+}
+
+/** Applies `patchFor(listingData)` to every listing a user owns, in batches. Returns count. */
+async function updateUserListings(userId, patchFor) {
+  const snap = await db.collection("listings").where("userId", "==", userId).get();
+  let updated = 0;
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 400).forEach((doc) => {
+      const patch = patchFor(doc.data());
+      if (patch && Object.keys(patch).length) {
+        batch.update(doc.ref, patch);
+        updated += 1;
+      }
+    });
+    await batch.commit();
+  }
+  return updated;
+}
+
 function tsToMillis(v) {
   if (!v) return null;
   if (typeof v.toMillis === "function") return v.toMillis();
@@ -59,6 +90,17 @@ function tsToMillis(v) {
 function serializeTimestamp(v) {
   const ms = tsToMillis(v);
   return ms != null ? ms : null;
+}
+
+/** uid → email for up to a few hundred uids (missing/deleted users are skipped). */
+async function emailsForUids(uids) {
+  const unique = [...new Set(uids.filter((u) => typeof u === "string" && u))];
+  const map = {};
+  for (let i = 0; i < unique.length; i += 100) {
+    const res = await admin.auth().getUsers(unique.slice(i, i + 100).map((uid) => ({ uid })));
+    res.users.forEach((u) => { map[u.uid] = u.email || null; });
+  }
+  return map;
 }
 
 /**
@@ -74,6 +116,7 @@ const getAdminStats = functions.https.onCall(async (data, context) => {
 
   try {
     const categoryKeys = ["housing", "forSale", "jobs", "services", "community", "personals"];
+    const livePaid = db.collection("payments").where("status", "==", "paid").where("livemode", "==", true);
 
     const [
       allListingsSnap,
@@ -85,7 +128,9 @@ const getAdminStats = functions.https.onCall(async (data, context) => {
       soldSnap,
       newUsers30Snap,
       openHelpSnap,
-      paidPaymentsSnap,
+      revenueSnap,
+      extraImagesPaidSnap,
+      housingPaidSnap,
       recentPaymentsSnap,
       recentHelpSnap,
       onlineUsersSnap,
@@ -100,7 +145,10 @@ const getAdminStats = functions.https.onCall(async (data, context) => {
       db.collection("listings").where("status", "==", "sold").count().get(),
       db.collection("users").where("createdAt", ">=", thirtyDaysAgo).count().get(),
       db.collection("help-requests").where("status", "==", "new").count().get(),
-      db.collection("payments").where("status", "==", "paid").get(),
+      // Live payments only (test-mode records from before launch have no livemode: true)
+      livePaid.aggregate({ total: AggregateField.sum("amountCents"), count: AggregateField.count() }).get(),
+      livePaid.where("productType", "==", "extra_images").count().get(),
+      livePaid.where("productType", "==", "housing_listing").count().get(),
       db.collection("payments").orderBy("createdAt", "desc").limit(25).get(),
       db.collection("help-requests").orderBy("submittedAt", "desc").limit(25).get(),
       db.collection("users").where("lastActiveAt", ">=", onlineCutoff).orderBy("lastActiveAt", "desc").limit(50).get(),
@@ -132,25 +180,12 @@ const getAdminStats = functions.https.onCall(async (data, context) => {
       return t && t.toMillis() >= sevenDaysAgo.toMillis();
     }).length;
 
-    let totalRevenueCents = 0;
-    let paidPaymentCount = 0;
-    paidPaymentsSnap.forEach((doc) => {
-      const d = doc.data();
-      if (d.status === "paid") {
-        paidPaymentCount += 1;
-        totalRevenueCents += d.amountCents || 0;
-      }
-    });
-
-    const paymentsByProduct = { extra_images: 0, housing_listing: 0, other: 0 };
-    paidPaymentsSnap.forEach((doc) => {
-      const pt = doc.data().productType;
-      if (pt === "extra_images" || pt === "housing_listing") {
-        paymentsByProduct[pt] += 1;
-      } else {
-        paymentsByProduct.other += 1;
-      }
-    });
+    const totalRevenueCents = revenueSnap.data().total || 0;
+    const paidPaymentCount = revenueSnap.data().count || 0;
+    const paymentsByProduct = {
+      extra_images: extraImagesPaidSnap.data().count,
+      housing_listing: housingPaidSnap.data().count,
+    };
 
     const recentPayments = recentPaymentsSnap.docs.map((doc) => {
       const d = doc.data();
@@ -161,10 +196,16 @@ const getAdminStats = functions.https.onCall(async (data, context) => {
         status: d.status,
         amountCents: d.amountCents,
         currency: d.currency || "usd",
+        livemode: d.livemode === true,
+        source: d.source || "stripe",
+        promoCode: d.promoCode || null,
+        consumedByListingId: d.consumedByListingId || null,
         paidAt: serializeTimestamp(d.paidAt),
         createdAt: serializeTimestamp(d.createdAt),
       };
     });
+    const payerEmails = await emailsForUids(recentPayments.map((p) => p.userId));
+    recentPayments.forEach((p) => { p.userEmail = payerEmails[p.userId] || null; });
 
     const recentHelpRequests = recentHelpSnap.docs.map((doc) => {
       const d = doc.data();
@@ -230,44 +271,63 @@ const getAdminStats = functions.https.onCall(async (data, context) => {
 });
 
 /**
- * List registered users with profile + Auth metadata.
+ * List registered users with profile + Auth metadata. Anonymous sessions (created for every
+ * visitor of a category page) are not accounts and are skipped; up to 10 Auth pages are scanned
+ * per call to collect at least `limit` accounts.
  */
 const adminListUsers = functions.https.onCall(async (data, context) => {
   await assertAdmin(context);
   const limit = Math.min(Math.max((data && data.limit) || 100, 1), 500);
-  const pageToken = data && data.pageToken;
+  let pageToken = (data && data.pageToken) || undefined;
 
   try {
-    const listResult = await admin.auth().listUsers(limit, pageToken || undefined);
-    const users = await Promise.all(
-      listResult.users.map(async (authUser) => {
-        const profSnap = await db.collection("users").doc(authUser.uid).get();
-        const prof = profSnap.exists ? profSnap.data() : {};
-        const listingsSnap = await db.collection("listings").where("userId", "==", authUser.uid).count().get();
-        const isAdmin = (await db.collection("admins").doc(authUser.uid).get()).exists;
-        return {
-          uid: authUser.uid,
-          email: authUser.email || prof.email || null,
-          displayName: prof.displayName || authUser.displayName || null,
-          fullName: prof.fullName || null,
-          phone: prof.phone || null,
-          contactEmail: prof.contactEmail || null,
-          createdAt: authUser.metadata.creationTime,
-          lastSignIn: authUser.metadata.lastSignInTime,
-          lastActiveAt: serializeTimestamp(prof.lastActiveAt),
-          listingCount: listingsSnap.data().count,
-          referralCount: prof.referralCount || 0,
-          referralPoints: prof.referralPoints || 0,
-          referredBy: prof.referredBy || null,
-          disabled: authUser.disabled,
-          isAdmin,
-        };
-      }),
-    );
+    const accounts = [];
+    let anonymousSkipped = 0;
+    for (let i = 0; i < 10 && accounts.length < limit; i++) {
+      const page = await admin.auth().listUsers(1000, pageToken);
+      page.users.forEach((u) => {
+        if (u.providerData.length === 0) anonymousSkipped += 1;
+        else accounts.push(u);
+      });
+      pageToken = page.pageToken;
+      if (!pageToken) break;
+    }
+
+    const profileRefs = accounts.map((u) => db.collection("users").doc(u.uid));
+    const adminRefs = accounts.map((u) => db.collection("admins").doc(u.uid));
+    const [profiles, adminDocs] = await Promise.all([
+      profileRefs.length ? db.getAll(...profileRefs) : [],
+      adminRefs.length ? db.getAll(...adminRefs) : [],
+    ]);
+    const listingCounts = await runInChunks(accounts, 50, (u) =>
+      db.collection("listings").where("userId", "==", u.uid).count().get().then((c) => c.data().count));
+
+    const users = accounts.map((authUser, i) => {
+      const prof = profiles[i] && profiles[i].exists ? profiles[i].data() : {};
+      return {
+        uid: authUser.uid,
+        email: authUser.email || prof.email || null,
+        emailVerified: authUser.emailVerified === true,
+        displayName: prof.displayName || authUser.displayName || null,
+        fullName: prof.fullName || null,
+        phone: prof.phone || null,
+        contactEmail: prof.contactEmail || null,
+        createdAt: authUser.metadata.creationTime,
+        lastSignIn: authUser.metadata.lastSignInTime,
+        lastActiveAt: serializeTimestamp(prof.lastActiveAt),
+        listingCount: listingCounts[i],
+        referralCount: prof.referralCount || 0,
+        referralPoints: prof.referralPoints || 0,
+        referredBy: prof.referredBy || null,
+        disabled: authUser.disabled,
+        isAdmin: adminDocs[i] && adminDocs[i].exists,
+      };
+    });
 
     return {
       users,
-      nextPageToken: listResult.pageToken || null,
+      anonymousSkipped,
+      nextPageToken: pageToken || null,
     };
   } catch (error) {
     console.error("adminListUsers error:", error);
@@ -285,12 +345,22 @@ const adminUpdateUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("invalid-argument", "userId is required.");
   }
 
+  // The profile email mirrors the login email (users keep it in sync), so it isn't editable here.
   const updates = {};
-  if (data.displayName != null) updates.displayName = String(data.displayName).trim();
-  if (data.fullName != null) updates.fullName = String(data.fullName).trim();
-  if (data.phone != null) updates.phone = String(data.phone).trim();
-  if (data.contactEmail != null) updates.contactEmail = String(data.contactEmail).trim();
-  if (data.email != null) updates.email = String(data.email).trim();
+  if (data.displayName != null) updates.displayName = String(data.displayName).trim().slice(0, 80);
+  if (data.fullName != null) updates.fullName = String(data.fullName).trim().slice(0, 120);
+  if (data.phone != null) {
+    updates.phone = String(data.phone).trim();
+    if (updates.phone && !CONTACT_PHONE_RE.test(updates.phone)) {
+      throw new functions.https.HttpsError("invalid-argument", "Invalid contact phone.");
+    }
+  }
+  if (data.contactEmail != null) {
+    updates.contactEmail = String(data.contactEmail).trim();
+    if (updates.contactEmail && !CONTACT_EMAIL_RE.test(updates.contactEmail)) {
+      throw new functions.https.HttpsError("invalid-argument", "Invalid contact email.");
+    }
+  }
 
   if (Object.keys(updates).length === 0) {
     throw new functions.https.HttpsError("invalid-argument", "No fields to update.");
@@ -300,13 +370,36 @@ const adminUpdateUser = functions.https.onCall(async (data, context) => {
   updates.updatedByAdmin = context.auth.uid;
 
   try {
-    await db.collection("users").doc(userId).set(updates, { merge: true });
+    const userRef = db.collection("users").doc(userId);
+    const before = (await userRef.get()).data() || {};
+    await userRef.set(updates, { merge: true });
 
     if (updates.displayName) {
       await admin.auth().updateUser(userId, { displayName: updates.displayName });
     }
 
-    return { success: true, userId, updates };
+    // Ads carry a copy of the contact details; keep them in line with the corrected account.
+    const phoneChanged = "phone" in updates && updates.phone !== (before.phone || "");
+    const emailChanged = "contactEmail" in updates && updates.contactEmail !== (before.contactEmail || "");
+    let listingsUpdated = 0;
+    if (phoneChanged || emailChanged) {
+      listingsUpdated = await updateUserListings(userId, (listing) => {
+        const patch = {};
+        let prefs = Array.isArray(listing.contactPreferences) ? listing.contactPreferences : [];
+        if (phoneChanged && listing.contactPhone) {
+          patch.contactPhone = updates.phone;
+          if (!updates.phone) prefs = prefs.filter((p) => p !== "phone" && p !== "whatsapp");
+        }
+        if (emailChanged && listing.contactEmail) {
+          patch.contactEmail = updates.contactEmail;
+          if (!updates.contactEmail) prefs = prefs.filter((p) => p !== "email");
+        }
+        if (Object.keys(patch).length) patch.contactPreferences = prefs;
+        return patch;
+      });
+    }
+
+    return { success: true, userId, updates, listingsUpdated };
   } catch (error) {
     console.error("adminUpdateUser error:", error);
     throw new functions.https.HttpsError("internal", error.message);
@@ -435,6 +528,23 @@ const adminSetUserDisabled = functions.https.onCall(async (data, context) => {
 
   try {
     await admin.auth().updateUser(userId, { disabled });
+    if (disabled) {
+      // Ends refresh; already-issued ID tokens still work until they expire (≤ 1 hour)
+      await admin.auth().revokeRefreshTokens(userId);
+    }
+    // Suspended ads drop out of public search (Algolia sync) and show as unavailable
+    const listingsAffected = await updateUserListings(userId, (listing) => {
+      if (disabled) {
+        return listing.suspended === true ? null : {
+          suspended: true,
+          suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+      }
+      return listing.suspended === true ? {
+        suspended: admin.firestore.FieldValue.delete(),
+        suspendedAt: admin.firestore.FieldValue.delete(),
+      } : null;
+    });
     await db.collection("users").doc(userId).set({
       disabled,
       disabledAt: disabled ? admin.firestore.FieldValue.serverTimestamp() : null,
@@ -442,7 +552,7 @@ const adminSetUserDisabled = functions.https.onCall(async (data, context) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
 
-    return { success: true, userId, disabled };
+    return { success: true, userId, disabled, listingsAffected };
   } catch (error) {
     console.error("adminSetUserDisabled error:", error);
     throw new functions.https.HttpsError("internal", error.message);
@@ -521,6 +631,89 @@ const adminDeleteUsers = functions.https.onCall(async (data, context) => {
   };
 });
 
+/**
+ * Find listings by listing ID, owner email or owner UID; empty query = 100 newest.
+ * data: { query?, status?: "active"|"pending"|"sold"|"suspended" }
+ */
+const adminSearchListings = functions.https.onCall(async (data, context) => {
+  await assertAdmin(context);
+  const query = String((data && data.query) || "").trim();
+  const status = data && data.status ? String(data.status) : "";
+  const listingsCol = db.collection("listings");
+
+  try {
+    let docs = [];
+    let owner = null;
+    if (!query) {
+      docs = (await listingsCol.orderBy("createdAt", "desc").limit(100).get()).docs;
+    } else {
+      if (!query.includes("@") && /^[A-Za-z0-9_-]{10,128}$/.test(query)) {
+        const byId = await listingsCol.doc(query).get();
+        if (byId.exists) docs = [byId];
+      }
+      if (!docs.length) {
+        let uid = null;
+        if (query.includes("@")) {
+          try {
+            uid = (await admin.auth().getUserByEmail(query)).uid;
+          } catch (e) {
+            uid = null;
+          }
+        } else if (/^[A-Za-z0-9]{20,128}$/.test(query)) {
+          uid = query;
+        }
+        if (uid) {
+          owner = uid;
+          docs = (await listingsCol.where("userId", "==", uid).limit(300).get()).docs;
+        }
+      }
+    }
+
+    let listings = docs.map((doc) => {
+      const d = doc.data();
+      return {
+        id: doc.id,
+        title: d.title_es || d.title_en || "(no title)",
+        category: d.category || null,
+        subCategory: d.subCategory || null,
+        status: d.status || "active",
+        suspended: d.suspended === true,
+        userId: d.userId || null,
+        price: d.price || null,
+        contactPhone: d.contactPhone || "",
+        contactEmail: d.contactEmail || "",
+        imageCount: Array.isArray(d.imageUrls) ? d.imageUrls.length : 0,
+        createdAt: serializeTimestamp(d.createdAt),
+        expiresAt: serializeTimestamp(d.expiresAt),
+      };
+    });
+    if (status === "suspended") listings = listings.filter((l) => l.suspended);
+    else if (status) listings = listings.filter((l) => l.status === status);
+    listings.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    const emails = await emailsForUids(listings.map((l) => l.userId));
+    listings.forEach((l) => { l.ownerEmail = emails[l.userId] || null; });
+    return { listings, owner };
+  } catch (error) {
+    console.error("adminSearchListings error:", error);
+    throw new functions.https.HttpsError("internal", error.message);
+  }
+});
+
+/** Marks a user's email as verified (support cases where the link email never arrives). */
+const adminSetEmailVerified = functions.https.onCall(async (data, context) => {
+  const adminUid = await assertAdmin(context);
+  const userId = data && data.userId;
+  await assertCanModifyUser(adminUid, userId);
+  try {
+    await admin.auth().updateUser(userId, { emailVerified: true });
+    return { success: true, userId };
+  } catch (error) {
+    console.error("adminSetEmailVerified error:", error);
+    throw new functions.https.HttpsError("internal", error.message);
+  }
+});
+
 module.exports = {
   getAdminStats,
   adminListUsers,
@@ -531,4 +724,6 @@ module.exports = {
   adminUpdateListing,
   adminDeleteListing,
   adminUpdateHelpRequest,
+  adminSearchListings,
+  adminSetEmailVerified,
 };
