@@ -113,6 +113,32 @@
                     </div>
                 </form>
 
+                <!-- Password reset (opened from "Forgot your password?") -->
+                <form id="reset-form" class="space-y-4" style="display: none;" novalidate>
+                    <p class="text-sm text-gray-600">
+                        <span class="lang-en">Enter your account email and we'll send you a link to choose a new password.</span>
+                        <span class="lang-es">Ingrese el correo de su cuenta y le enviaremos un enlace para elegir una nueva contraseña.</span>
+                    </p>
+                    <div>
+                        <label for="reset-email" class="block text-sm font-medium text-gray-700">
+                            <span class="lang-en">Email</span>
+                            <span class="lang-es">Correo Electrónico</span>
+                        </label>
+                        <input type="email" id="reset-email" autocomplete="email" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div id="reset-message-area" class="text-center text-sm"></div>
+                    <button type="submit" id="reset-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+                        <span class="lang-en">Send reset link</span>
+                        <span class="lang-es">Enviar enlace</span>
+                    </button>
+                    <div class="text-sm text-center">
+                        <a href="#" id="reset-back-btn" class="text-blue-600 hover:underline">
+                            <span class="lang-en">Back to login</span>
+                            <span class="lang-es">Volver a ingresar</span>
+                        </a>
+                    </div>
+                </form>
+
                 <!-- Sign Up Form -->
                 <form id="signup-form" class="space-y-4" style="display: none;">
 
@@ -185,10 +211,10 @@
                             <span class="lang-en">Password</span>
                             <span class="lang-es">Contraseña</span>
                         </label>
-                        <input type="password" id="signup-password" name="signup-password" required minlength="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <input type="password" id="signup-password" name="signup-password" required minlength="8" autocomplete="new-password" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                         <p class="mt-1 text-xs text-gray-500">
-                            <span class="lang-en">Must be at least 6 characters.</span>
-                            <span class="lang-es">Debe tener al menos 6 caracteres.</span>
+                            <span class="lang-en">At least 8 characters, with an uppercase and a lowercase letter, a number and a symbol.</span>
+                            <span class="lang-es">Al menos 8 caracteres, con una mayúscula, una minúscula, un número y un símbolo.</span>
                         </p>
                     </div>
                     <div>
@@ -221,6 +247,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     <script src="app.js"></script>
     <script src="js/email-verification.js?v=1"></script>
+    <script src="js/password-policy.js?v=1"></script>
     <script src="js/referrals.js?v=3"></script>
     <script src="js/referral-ui.js?v=2"></script>
 
@@ -238,6 +265,10 @@
         const loginMessageArea = document.getElementById('login-message-area');
         const signupMessageArea = document.getElementById('signup-message-area');
         const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+        const resetForm = document.getElementById('reset-form');
+        const resetEmailInput = document.getElementById('reset-email');
+        const resetMessageArea = document.getElementById('reset-message-area');
+        const resetButton = document.getElementById('reset-button');
         const loginButton = document.getElementById('login-button');
         const signupButton = document.getElementById('signup-button');
         
@@ -275,7 +306,7 @@
                 originalSetLang(lang, pageSpecificText);
             }
             // Manually update tab styles if needed
-            if (loginForm.style.display !== 'none') {
+            if (signupForm.style.display === 'none') {
                 loginTabBtn.classList.add('text-blue-600', 'border-blue-600');
                 loginTabBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
                 signupTabBtn.classList.add('text-gray-500', 'hover:text-gray-700');
@@ -290,6 +321,7 @@
             // Clear messages on lang switch
             displayMessage(loginMessageArea, '', 'info');
             displayMessage(signupMessageArea, '', 'info');
+            if (resetMessageArea) displayMessage(resetMessageArea, '', 'info');
         };
 
         // --- 3. UI/Form Logic ---
@@ -307,12 +339,14 @@
         loginTabBtn.addEventListener('click', () => {
             loginForm.style.display = 'block';
             signupForm.style.display = 'none';
+            resetForm.style.display = 'none';
             window.setLang(currentLang); // Update tab styles
         });
 
         signupTabBtn.addEventListener('click', () => {
             loginForm.style.display = 'none';
             signupForm.style.display = 'block';
+            resetForm.style.display = 'none';
             updateReferralInviteBanner();
             window.setLang(currentLang); // Update tab styles
         });
@@ -343,7 +377,8 @@
                     'auth/user-not-found': 'No account found with this email.',
                     'auth/wrong-password': 'Incorrect password. Please try again.',
                     'auth/email-already-in-use': 'This email is already in use by another account.',
-                    'auth/weak-password': 'Password is too weak. Must be at least 6 characters.',
+                    'auth/weak-password': 'Password must have at least 8 characters, an uppercase and a lowercase letter, a number and a symbol (e.g. ! @ # $ %).',
+                    'auth/password-does-not-meet-requirements': 'Password must have at least 8 characters, an uppercase and a lowercase letter, a number and a symbol (e.g. ! @ # $ %).',
                     'password-mismatch': 'Passwords do not match.',
                     'name-required': 'Please enter your display name.', // NEW
                     'fullname-required': 'Please enter your full name.', // NEW
@@ -352,7 +387,7 @@
                     'invalid-contact-email': 'Enter a valid contact email.',
                     'signup-success': 'Account created! We sent you an email to verify your address.',
                     'login-success': 'Login successful! Redirecting...',
-                    'reset-email-sent': 'Password reset email sent! Check your inbox.',
+                    'reset-email-sent': 'If an account exists for that email, we sent a link to reset the password. Check your inbox and spam folder.',
                     'auth/too-many-requests': 'Too many attempts. Please try again later.',
                     'unknown-error': 'An unknown error occurred. Please try again.'
                 },
@@ -362,7 +397,8 @@
                     'auth/user-not-found': 'No se encontró cuenta con este correo.',
                     'auth/wrong-password': 'Contraseña incorrecta. Intente de nuevo.',
                     'auth/email-already-in-use': 'Este correo ya está en uso por otra cuenta.',
-                    'auth/weak-password': 'La contraseña es muy débil. Debe tener al menos 6 caracteres.',
+                    'auth/weak-password': 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo (ej. ! @ # $ %).',
+                    'auth/password-does-not-meet-requirements': 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo (ej. ! @ # $ %).',
                     'password-mismatch': 'Las contraseñas no coinciden.',
                     'name-required': 'Por favor ingrese su nombre para mostrar.', // NEW
                     'fullname-required': 'Por favor ingrese su nombre completo.', // NEW
@@ -371,7 +407,7 @@
                     'invalid-contact-email': 'Ingrese un correo de contacto válido.',
                     'signup-success': '¡Cuenta creada! Le enviamos un correo para verificar su dirección.',
                     'login-success': '¡Ingreso exitoso! Redirigiendo...',
-                    'reset-email-sent': '¡Correo de reenvío de contraseña enviado! Revise su bandeja de entrada.',
+                    'reset-email-sent': 'Si existe una cuenta con ese correo, le enviamos un enlace para restablecer la contraseña. Revise su bandeja de entrada y spam.',
                     'auth/too-many-requests': 'Demasiados intentos. Por favor intente más tarde.',
                     'unknown-error': 'Ocurrió un error inesperado. Por favor intente de nuevo.'
                 }
@@ -433,6 +469,13 @@
                 displayMessage(signupMessageArea, 'invalid-contact-email', 'error');
                 signupButton.disabled = false;
                 signupContactEmailInput.focus();
+                return;
+            }
+
+            if (window.NunciaYaPassword && NunciaYaPassword.missing(password).length) {
+                displayMessage(signupMessageArea, 'auth/password-does-not-meet-requirements', 'error');
+                signupButton.disabled = false;
+                signupPasswordInput.focus();
                 return;
             }
 
@@ -590,20 +633,51 @@
             }
         }
         
-        async function handleForgotPassword() {
-            const email = loginForm['login-email'].value;
-            if (!email) {
-                displayMessage(loginMessageArea, 'auth/invalid-email', 'error');
-                loginForm['login-email'].focus();
+        /** Shows the reset step (inside the login tab), prefilled with the login email. */
+        function showResetForm(event) {
+            if (event) event.preventDefault();
+            loginForm.style.display = 'none';
+            signupForm.style.display = 'none';
+            resetForm.style.display = 'block';
+            resetEmailInput.value = loginForm['login-email'].value.trim();
+            displayMessage(resetMessageArea, '', 'info');
+            resetButton.disabled = false;
+            resetEmailInput.focus();
+        }
+
+        function hideResetForm(event) {
+            if (event) event.preventDefault();
+            resetForm.style.display = 'none';
+            loginForm.style.display = 'block';
+            if (resetEmailInput.value.trim()) loginForm['login-email'].value = resetEmailInput.value.trim();
+        }
+
+        /**
+         * Sends Firebase's password reset email. The confirmation is the same whether or not an
+         * account exists, so the form doesn't reveal which emails are registered.
+         */
+        async function handleResetSubmit(event) {
+            event.preventDefault();
+            const email = resetEmailInput.value.trim();
+            if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+                displayMessage(resetMessageArea, 'auth/invalid-email', 'error');
+                resetEmailInput.focus();
                 return;
             }
-            
+            resetButton.disabled = true;
             try {
-                await auth.sendPasswordResetEmail(email);
-                displayMessage(loginMessageArea, 'reset-email-sent', 'success');
+                await auth.sendPasswordResetEmail(email, { url: window.location.origin + '/my-account.html' });
+                displayMessage(resetMessageArea, 'reset-email-sent', 'success');
             } catch (error) {
-                console.error("Forgot password error:", error);
-                displayMessage(loginMessageArea, error.code || 'unknown-error', 'error');
+                console.error("Password reset error:", error);
+                if (error.code === 'auth/user-not-found') {
+                    displayMessage(resetMessageArea, 'reset-email-sent', 'success');
+                } else {
+                    displayMessage(resetMessageArea, error.code || 'unknown-error', 'error');
+                }
+            } finally {
+                // Brief pause so the button can't be hammered
+                setTimeout(() => { resetButton.disabled = false; }, 15000);
             }
         }
 
@@ -651,7 +725,9 @@
                     loginForm.addEventListener('submit', handleSignIn);
                     signupForm.addEventListener('submit', handleSignUp);
                     logoutButton.addEventListener('click', handleLogout);
-                    forgotPasswordBtn.addEventListener('click', handleForgotPassword);
+                    forgotPasswordBtn.addEventListener('click', showResetForm);
+                    document.getElementById('reset-back-btn').addEventListener('click', hideResetForm);
+                    resetForm.addEventListener('submit', handleResetSubmit);
                     if (window.NunciaYaReferralUI) {
                         NunciaYaReferralUI.init({ triggers: ['#refer-friend-account-btn'] });
                     }

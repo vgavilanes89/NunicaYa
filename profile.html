@@ -127,6 +127,11 @@
                         <span class="lang-en">Contact Support</span>
                         <span class="lang-es">Contactar Soporte</span>
                     </button>
+                    <button type="button" id="change-password-button"
+                        class="mt-4 w-full border border-gray-300 text-gray-800 p-2 rounded-md hover:bg-gray-50">
+                        <span class="lang-en">Change password</span>
+                        <span class="lang-es">Cambiar contraseña</span>
+                    </button>
                     <button id="logout-button"
                         class="mt-6 w-full bg-red-600 text-white p-2 rounded-md hover:bg-red-700">
                         <span class="lang-en">Logout</span>
@@ -300,6 +305,58 @@
     </div>
 
 
+    <!-- Change password modal -->
+    <div id="change-password-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" role="dialog" aria-labelledby="change-password-title">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-start gap-4">
+                <h3 id="change-password-title" class="text-lg font-medium text-gray-900">
+                    <span class="lang-en">Change password</span>
+                    <span class="lang-es">Cambiar contraseña</span>
+                </h3>
+                <button type="button" id="change-password-close" class="text-gray-400 hover:text-gray-600 text-2xl leading-none" aria-label="Close">&times;</button>
+            </div>
+            <form id="change-password-form" class="p-6 space-y-4" novalidate>
+                <div>
+                    <label for="current-password" class="block text-sm font-medium text-gray-700">
+                        <span class="lang-en">Current password</span>
+                        <span class="lang-es">Contraseña actual</span>
+                    </label>
+                    <input type="password" id="current-password" autocomplete="current-password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="new-password" class="block text-sm font-medium text-gray-700">
+                        <span class="lang-en">New password</span>
+                        <span class="lang-es">Nueva contraseña</span>
+                    </label>
+                    <input type="password" id="new-password" autocomplete="new-password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <p class="mt-1 text-xs text-gray-500">
+                        <span class="lang-en">At least 8 characters, with an uppercase and a lowercase letter, a number and a symbol.</span>
+                        <span class="lang-es">Al menos 8 caracteres, con una mayúscula, una minúscula, un número y un símbolo.</span>
+                    </p>
+                </div>
+                <div>
+                    <label for="new-password-confirm" class="block text-sm font-medium text-gray-700">
+                        <span class="lang-en">Confirm new password</span>
+                        <span class="lang-es">Confirmar nueva contraseña</span>
+                    </label>
+                    <input type="password" id="new-password-confirm" autocomplete="new-password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div id="change-password-message" class="text-sm text-center hidden"></div>
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 pt-2">
+                    <button type="button" id="send-reset-link" class="text-sm text-blue-600 hover:underline text-left">
+                        <span class="lang-en">Forgot it? Email me a reset link</span>
+                        <span class="lang-es">¿La olvidó? Envíenme un enlace</span>
+                    </button>
+                    <button type="submit" id="change-password-submit"
+                        class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="lang-en">Update password</span>
+                        <span class="lang-es">Actualizar contraseña</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Delete account modal -->
     <div id="delete-account-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto" role="dialog" aria-labelledby="delete-account-title">
@@ -356,6 +413,7 @@
     <!-- Main Application Script -->
     <script src="config.js"></script>
     <script src="app.js"></script>
+    <script src="js/password-policy.js?v=1"></script>
     <script src="js/referrals.js?v=2"></script>
     <script src="js/referral-ui.js?v=2"></script>
 
@@ -1168,6 +1226,117 @@
             }
         }
 
+        // --- Change password (re-checks the current one) / email a reset link ---
+        const changePasswordModal = document.getElementById('change-password-modal');
+        const changePasswordForm = document.getElementById('change-password-form');
+        const changePasswordSubmit = document.getElementById('change-password-submit');
+        const changePasswordMessage = document.getElementById('change-password-message');
+
+        const PASSWORD_TEXT = {
+            en: {
+                current: 'Enter your current password.',
+                wrongPassword: 'Your current password is incorrect.',
+                policy: 'The new password needs at least 8 characters, an uppercase and a lowercase letter, a number and a symbol.',
+                mismatch: 'The new passwords do not match.',
+                same: 'Choose a password different from the current one.',
+                tooMany: 'Too many attempts. Please wait a few minutes and try again.',
+                working: 'Updating…',
+                done: 'Password updated.',
+                resetSent: (email) => `We sent a reset link to ${email}. Check your inbox and spam folder.`,
+                noPassword: 'This account has no password. Contact support.',
+                error: 'Could not update the password. Please try again.',
+            },
+            es: {
+                current: 'Ingrese su contraseña actual.',
+                wrongPassword: 'La contraseña actual es incorrecta.',
+                policy: 'La nueva contraseña necesita al menos 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.',
+                mismatch: 'Las nuevas contraseñas no coinciden.',
+                same: 'Elija una contraseña diferente a la actual.',
+                tooMany: 'Demasiados intentos. Espere unos minutos e intente de nuevo.',
+                working: 'Actualizando…',
+                done: 'Contraseña actualizada.',
+                resetSent: (email) => `Enviamos un enlace a ${email}. Revise su bandeja de entrada y spam.`,
+                noPassword: 'Esta cuenta no tiene contraseña. Contacte a soporte.',
+                error: 'No se pudo actualizar la contraseña. Intente de nuevo.',
+            },
+        };
+
+        /** state: 'error' (red), 'ok' (green) or 'info' (grey). */
+        function showPasswordMessage(key, state, arg) {
+            const dict = PASSWORD_TEXT[currentLang === 'en' ? 'en' : 'es'];
+            const value = dict[key] || dict.error;
+            changePasswordMessage.textContent = typeof value === 'function' ? value(arg) : value;
+            changePasswordMessage.classList.remove('hidden', 'text-red-600', 'text-green-700', 'text-gray-600');
+            changePasswordMessage.classList.add(state === 'ok' ? 'text-green-700' : (state === 'info' ? 'text-gray-600' : 'text-red-600'));
+        }
+
+        function openChangePasswordModal() {
+            changePasswordForm.reset();
+            changePasswordMessage.classList.add('hidden');
+            changePasswordSubmit.disabled = false;
+            changePasswordModal.classList.remove('hidden');
+            changePasswordModal.classList.add('flex');
+            document.getElementById('current-password').focus();
+        }
+
+        function closeChangePasswordModal() {
+            changePasswordModal.classList.add('hidden');
+            changePasswordModal.classList.remove('flex');
+        }
+
+        async function handleChangePassword(event) {
+            event.preventDefault();
+            const user = auth && auth.currentUser;
+            if (!user) return;
+            const current = document.getElementById('current-password').value;
+            const next = document.getElementById('new-password').value;
+            const confirmNext = document.getElementById('new-password-confirm').value;
+            if (!user.providerData.some((p) => p.providerId === 'password')) return showPasswordMessage('noPassword');
+            if (!current) return showPasswordMessage('current');
+            if (window.NunciaYaPassword && NunciaYaPassword.missing(next).length) return showPasswordMessage('policy');
+            if (next !== confirmNext) return showPasswordMessage('mismatch');
+            if (next === current) return showPasswordMessage('same');
+
+            changePasswordSubmit.disabled = true;
+            showPasswordMessage('working', 'info');
+            try {
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, current);
+                await user.reauthenticateWithCredential(credential);
+                await user.updatePassword(next);
+                showPasswordMessage('done', 'ok');
+                setTimeout(closeChangePasswordModal, 1500);
+            } catch (error) {
+                console.error('Password change failed:', error);
+                const code = String((error && error.code) || '');
+                if (code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-login-credentials') {
+                    showPasswordMessage('wrongPassword');
+                } else if (window.NunciaYaPassword && NunciaYaPassword.isPolicyError(code)) {
+                    showPasswordMessage('policy');
+                } else if (code === 'auth/too-many-requests') {
+                    showPasswordMessage('tooMany');
+                } else {
+                    showPasswordMessage('error');
+                }
+                changePasswordSubmit.disabled = false;
+            }
+        }
+
+        async function sendPasswordResetFromProfile() {
+            const user = auth && auth.currentUser;
+            if (!user || !user.email) return;
+            const btn = document.getElementById('send-reset-link');
+            btn.disabled = true;
+            try {
+                await auth.sendPasswordResetEmail(user.email, { url: window.location.origin + '/my-account.html' });
+                showPasswordMessage('resetSent', 'ok', user.email);
+            } catch (error) {
+                console.error('Password reset email failed:', error);
+                showPasswordMessage(error && error.code === 'auth/too-many-requests' ? 'tooMany' : 'error');
+            } finally {
+                setTimeout(() => { btn.disabled = false; }, 15000);
+            }
+        }
+
         // --- Self-service account deletion (deleteMyAccount Cloud Function) ---
         const deleteAccountModal = document.getElementById('delete-account-modal');
         const deleteAccountForm = document.getElementById('delete-account-form');
@@ -1323,6 +1492,13 @@
                             }
                         });
                         logoutButton.addEventListener('click', handleLogout);
+                        document.getElementById('change-password-button').addEventListener('click', openChangePasswordModal);
+                        document.getElementById('change-password-close').addEventListener('click', closeChangePasswordModal);
+                        document.getElementById('send-reset-link').addEventListener('click', sendPasswordResetFromProfile);
+                        changePasswordForm.addEventListener('submit', handleChangePassword);
+                        changePasswordModal.addEventListener('click', (e) => {
+                            if (e.target === changePasswordModal) closeChangePasswordModal();
+                        });
                         document.getElementById('delete-account-button').addEventListener('click', openDeleteAccountModal);
                         document.getElementById('delete-account-close').addEventListener('click', closeDeleteAccountModal);
                         document.getElementById('delete-account-cancel').addEventListener('click', closeDeleteAccountModal);
