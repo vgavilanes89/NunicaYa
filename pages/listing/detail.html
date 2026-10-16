@@ -1,10 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NunciaYa - Listing Details</title>
+    <title>Anuncio | NunciaYa</title>
+    <!-- seo:start -->
+    <meta name="description" content="Detalles del anuncio en NunciaYa, clasificados de Costa Rica.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="NunciaYa">
+    <meta property="og:locale" content="es_CR">
+    <meta property="og:title" content="Anuncio | NunciaYa">
+    <meta property="og:description" content="Detalles del anuncio en NunciaYa, clasificados de Costa Rica.">
+    <meta name="twitter:card" content="summary">
+    <!-- seo:end -->
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Link to the external stylesheet (two levels up) -->
@@ -621,7 +630,39 @@
         // --- End Gallery Functions ---
 
 
+        /** Title, description, canonical and link-preview tags for this specific ad. */
+        function applyListingSeo(ad) {
+            const id = getListingIdFromUrl();
+            const title = (ad.title_es || ad.title_en || 'Anuncio').trim();
+            const description = String(ad.description_es || ad.description_en || '')
+                .replace(/\s+/g, ' ').trim().slice(0, 155) || `${title} en NunciaYa, clasificados de Costa Rica.`;
+            const url = `https://nunciaya.com/pages/listing/detail.html?id=${encodeURIComponent(id || '')}`;
+            const setMeta = (attr, key, value) => {
+                let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+                if (!el) {
+                    el = document.createElement('meta');
+                    el.setAttribute(attr, key);
+                    document.head.appendChild(el);
+                }
+                el.setAttribute('content', value);
+            };
+            document.title = `${title} | NunciaYa`;
+            setMeta('name', 'description', description);
+            setMeta('property', 'og:title', document.title);
+            setMeta('property', 'og:description', description);
+            setMeta('property', 'og:url', url);
+            if (Array.isArray(ad.imageUrls) && ad.imageUrls[0]) setMeta('property', 'og:image', ad.imageUrls[0]);
+            let canonical = document.head.querySelector('link[rel="canonical"]');
+            if (!canonical) {
+                canonical = document.createElement('link');
+                canonical.rel = 'canonical';
+                document.head.appendChild(canonical);
+            }
+            canonical.href = url;
+        }
+
         function renderListing(ad) {
+            applyListingSeo(ad);
             listingTitleEn.textContent = ad.title_en || ad.title_es;
             listingTitleEs.textContent = ad.title_es || ad.title_en;
 

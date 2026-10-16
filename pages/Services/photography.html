@@ -1,10 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NunciaYa - Photography & Video</title>
+    <title>FotografÃ­a y Video en Costa Rica | NunciaYa</title>
+    <!-- seo:start -->
+    <meta name="description" content="Servicios de fotografÃ­a y Video en Costa Rica: encuentre profesionales cerca de usted o anuncie su servicio en NunciaYa.">
+    <link rel="canonical" href="https://nunciaya.com/pages/Services/photography.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="NunciaYa">
+    <meta property="og:locale" content="es_CR">
+    <meta property="og:title" content="FotografÃ­a y Video en Costa Rica | NunciaYa">
+    <meta property="og:description" content="Servicios de fotografÃ­a y Video en Costa Rica: encuentre profesionales cerca de usted o anuncie su servicio en NunciaYa.">
+    <meta property="og:url" content="https://nunciaya.com/pages/Services/photography.html">
+    <meta name="twitter:card" content="summary">
+    <!-- seo:end -->
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Link to the external stylesheet (two levels up) -->
@@ -212,12 +223,12 @@
                 <span class="mx-2 text-gray-500">&gt;</span>
                 <span class="text-gray-700">
                     <span class="lang-en">Photography & Video</span>
-                    <span class="lang-es">Fotografía y Video</span>
+                    <span class="lang-es">FotografÃ­a y Video</span>
                 </span>
             </nav>
             <h2 class="text-3xl font-bold">
                 <span class="lang-en">Photography & Video</span>
-                <span class="lang-es">Fotografía y Video</span>
+                <span class="lang-es">FotografÃ­a y Video</span>
             </h2>
         </div>
 
@@ -266,7 +277,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <label for="filter-radius" class="text-sm font-medium text-gray-700">
                         <span class="lang-en">Search radius</span>
-                        <span class="lang-es">Radio de búsqueda</span>
+                        <span class="lang-es">Radio de bÃºsqueda</span>
                     </label>
                     <span id="radius-value-label" class="text-sm font-semibold text-blue-700">10 km</span>
                 </div>
@@ -274,7 +285,7 @@
                 <div id="radius-mini-map" class="w-full rounded-md border border-gray-300 overflow-hidden bg-gray-100"></div>
                 <p class="text-xs text-gray-500 mt-2">
                     <span class="lang-en">Select a province to center the map. The circle shows the search radius from that area.</span>
-                    <span class="lang-es">Seleccione una provincia para centrar el mapa. El círculo muestra el radio de búsqueda desde esa zona.</span>
+                    <span class="lang-es">Seleccione una provincia para centrar el mapa. El cÃ­rculo muestra el radio de bÃºsqueda desde esa zona.</span>
                 </p>
             </div>
         </div>
@@ -313,8 +324,8 @@
                     <span class="lang-es">Ordenar</span>
                 </span>
                 <select id="filter-sort" class="p-2 border border-gray-300 rounded-md filter-select min-w-[11rem]" aria-label="Sort order">
-                    <option value="newest">Más recientes</option>
-                    <option value="oldest">Más antiguos</option>
+                    <option value="newest">MÃ¡s recientes</option>
+                    <option value="oldest">MÃ¡s antiguos</option>
                     <option value="price_asc">Precio: menor a mayor</option>
                     <option value="price_desc">Precio: mayor a menor</option>
                 </select>
@@ -348,12 +359,12 @@
         <div class="bg-white p-6 rounded-md shadow-lg w-11/12 md:w-1/3">
             <h3 class="text-lg font-medium leading-6 text-gray-900">
                 <span class="lang-en">Login Required</span>
-                <span class="lang-es">Se Requiere Iniciar Sesión</span>
+                <span class="lang-es">Se Requiere Iniciar SesiÃ³n</span>
             </h3>
             <div class="mt-2">
                 <p class="text-sm text-gray-500">
                     <span class="lang-en">Please log in or create an account to save favorites.</span>
-                    <span class="lang-es">Por favor, inicie sesión o cree una cuenta para guardar favoritos.</span>
+                    <span class="lang-es">Por favor, inicie sesiÃ³n o cree una cuenta para guardar favoritos.</span>
                 </p>
             </div>
             <div class="mt-4 flex justify-end space-x-2">
@@ -414,7 +425,7 @@
         // --- 3. Define page-specific text
         const pageSpecificText = {
             // *** UPDATED FOR THIS PAGE ***
-            'search-input': { en: 'Search photography services...', es: 'Buscar servicios de fotografía...' },
+            'search-input': { en: 'Search photography services...', es: 'Buscar servicios de fotografÃ­a...' },
             // --- Location text ---
             'all-zones-option': { en: 'All Provinces', es: 'Todas las Provincias' },
             'all-cantons-option': { en: 'All Cantons', es: 'Todos los Cantones' },
@@ -767,7 +778,7 @@
             const rawEn = listing.title_en || listing.titleEn || listing.title_es || listing.titleEs || listing.title || '';
             const rawEs = listing.title_es || listing.titleEs || listing.title_en || listing.titleEn || listing.title || '';
             const titleEn = (typeof rawEn === 'string' ? rawEn : String(rawEn || '')).trim() || 'Title not available';
-            const titleEs = (typeof rawEs === 'string' ? rawEs : String(rawEs || '')).trim() || 'Título no disponible';
+            const titleEs = (typeof rawEs === 'string' ? rawEs : String(rawEs || '')).trim() || 'TÃ­tulo no disponible';
             const currentTitle = (currentLang === 'es' ? titleEs : titleEn) || 'Title not available';
 
             const placeholderUrl = `https://placehold.co/100x100/EEE/333?text=${currentLang === 'es' ? 'Servicio' : 'Service'}`;
@@ -885,7 +896,7 @@
                 console.error("Favorite error full:", { code, message, error, listingId, userId: userId ? 'set' : 'missing' });
                 const isPermissionDenied = code === 'permission-denied' || code === '7' || (message && message.toLowerCase().indexOf('permission') !== -1);
                 const msg = isPermissionDenied
-                    ? (currentLang === 'es' ? 'Sesión expirada o sin permiso. Inicie sesión de nuevo.' : 'Session expired or permission denied. Please sign in again.')
+                    ? (currentLang === 'es' ? 'SesiÃ³n expirada o sin permiso. Inicie sesiÃ³n de nuevo.' : 'Session expired or permission denied. Please sign in again.')
                     : (currentLang === 'es' ? 'Error al guardar favorito. Consulte la consola (F12).' : 'Error saving favorite. Check console (F12) for details.');
                 alert(msg);
             }

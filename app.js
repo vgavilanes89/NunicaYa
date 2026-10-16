@@ -1,3 +1,9 @@
+// --- Canonical host: send www.nunciaya.com visitors to nunciaya.com (one site for search
+// engines and one login origin). Set the same redirect in Firebase Hosting → www domain. ---
+if (typeof window !== 'undefined' && window.location.hostname === 'www.nunciaya.com') {
+    window.location.replace('https://nunciaya.com' + window.location.pathname + window.location.search + window.location.hash);
+}
+
 // --- IMPORTS (Firebase SDKs are loaded globally via <script> tags in HTML) ---
 const { initializeApp } = firebase; // Use global firebase object
 const {
@@ -242,6 +248,7 @@ function setLang(lang, textMap = {}) {
     } else {
         localStorage.setItem(LANG_STORAGE_KEY, lang);
     }
+    document.documentElement.lang = lang; // pages ship lang="es"; keep it in sync with the toggle
 
     const enElements = document.querySelectorAll('.lang-en');
     const esElements = document.querySelectorAll('.lang-es');

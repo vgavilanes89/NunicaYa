@@ -1,0 +1,11 @@
+# NunciaYa — https://nunciaya.com
+User-agent: *
+Allow: /
+# Account and admin pages (also marked noindex)
+Disallow: /admin.html
+Disallow: /my-account.html
+Disallow: /post-ad.html
+Disallow: /profile.html
+Disallow: /offline.html
+
+Sitemap: https://nunciaya.com/sitemap.xml
