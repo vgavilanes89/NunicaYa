@@ -2,6 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Category pages sign visitors in anonymously; that is not an account.
+    function isAccount() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+    // Posting needs a verified email (sign-up sends the verification link).
+    function isVerifiedAccount() {
+      return isAccount() && request.auth.token.email_verified == true;
+    }
+
     // Listings: anyone can read; only the owner can create/update/delete their own.
     // Admin edits go through Cloud Functions (Admin SDK bypasses these rules).
     //
@@ -52,7 +62,7 @@ service cloud.firestore {
 
     match /listings/{listingId} {
       allow read: if true;
-      allow create: if request.auth != null
+      allow create: if isVerifiedAccount()
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.get('category', '') != 'housing'
         && validCategory(request.resource.data)
@@ -66,7 +76,7 @@ service cloud.firestore {
         && request.resource.data.get('status', 'active') == 'active';
       // Photo limit on edit: 2 free, 5 once extra photos were paid for; listings that already
       // had more photos (before this rule) may keep that many but not grow.
-      allow update: if request.auth != null
+      allow update: if isAccount()
         && resource.data.userId == request.auth.uid
         && request.resource.data.userId == request.auth.uid
         && !request.resource.data.diff(resource.data).affectedKeys()
@@ -81,32 +91,32 @@ service cloud.firestore {
           || imageCount(request.resource.data) <= imageCount(resource.data)
           || (resource.data.get('extraImagesPaid', false) == true
             && imageCount(request.resource.data) <= 5));
-      allow delete: if request.auth != null
+      allow delete: if isAccount()
         && resource.data.userId == request.auth.uid;
     }
 
     // User data: only the signed-in user can read/write their own (referral stats server-only)
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId
+      allow read: if isAccount() && request.auth.uid == userId;
+      allow create: if isAccount() && request.auth.uid == userId
         && !request.resource.data.keys().hasAny(['referralPoints', 'referralCount', 'referredBy']);
-      allow update: if request.auth != null && request.auth.uid == userId
+      allow update: if isAccount() && request.auth.uid == userId
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['referralPoints', 'referralCount', 'referredBy']);
     }
     // User favorites subcollection (required for favorites to load on search/category pages)
     match /users/{userId}/favorites/{favoriteId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAccount() && request.auth.uid == userId;
     }
 
     // Admins: only the user can read their own doc (to check if they are admin). No client write.
     match /admins/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isAccount() && request.auth.uid == userId;
       allow write: if false;
     }
 
     // Payments: written by Cloud Functions only; users may read their own records
     match /payments/{paymentId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isAccount() && resource.data.userId == request.auth.uid;
       allow write: if false;
     }
 
@@ -123,6 +133,9 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /referral-shares/{shareId} {
+      allow read, write: if false;
+    }
+    match /referral-pending/{userId} {
       allow read, write: if false;
     }
 

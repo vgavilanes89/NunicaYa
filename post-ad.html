@@ -113,6 +113,9 @@
             <span class="lang-es">Publicar Nuevo Anuncio</span>
         </h2>
 
+        <!-- Shown until the email is verified (js/email-verification.js) -->
+        <div id="email-verify-notice" class="hidden"></div>
+
         <form id="post-ad-form" class="bg-white p-6 rounded-md shadow-sm border border-gray-200 space-y-4" novalidate>
 
              <!-- Category and SubCategory Selectors --> 
@@ -399,6 +402,7 @@
 
     <!-- Main Application Script (config + payments load in head) -->
     <script src="app.js?v=3"></script>
+    <script src="js/email-verification.js?v=1"></script>
 
     <!-- Page-Specific Script -->
     <script>
@@ -1902,9 +1906,42 @@
         /**
         * UPDATED: handlePostAd to save all new filters
         */
+        // Posting and photo uploads need a verified email (firestore/storage rules and the
+        // createListing function enforce it); until then the form shows the verify notice.
+        let emailVerifiedForPosting = false;
+
+        async function gateOnEmailVerification(user) {
+            const notice = document.getElementById('email-verify-notice');
+            if (!user || !window.NunciaYaEmailVerification || !notice) return;
+            try {
+                emailVerifiedForPosting = await NunciaYaEmailVerification.refresh(user);
+            } catch (err) {
+                console.warn('Could not refresh verification status:', err);
+                emailVerifiedForPosting = false;
+            }
+            if (emailVerifiedForPosting) {
+                notice.innerHTML = '';
+                notice.classList.add('hidden');
+                submitButton.disabled = false;
+                return;
+            }
+            submitButton.disabled = true;
+            NunciaYaEmailVerification.renderNotice(notice, user, {
+                onVerified: () => {
+                    emailVerifiedForPosting = true;
+                    submitButton.disabled = false;
+                },
+            });
+            notice.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         async function handlePostAd(event) {
             event.preventDefault();
             messageArea.textContent = '';
+            if (!emailVerifiedForPosting) {
+                gateOnEmailVerification(auth && auth.currentUser);
+                return;
+            }
             submitButton.disabled = true;
 
             // Manual Validation
@@ -2165,11 +2202,15 @@
                      extraImagesUnlocked = false;
                      updateImageLimitLabel();
                      showPaywallModal('extra_images');
+                 } else if (error && (error.message === 'email_not_verified'
+                     || (error.details && error.details.reason === 'email_not_verified'))) {
+                     emailVerifiedForPosting = false;
+                     gateOnEmailVerification(auth.currentUser);
                  } else {
                      displayMessage(error?.code || 'firestore-error', 'error');
                  }
              } finally {
-                  submitButton.disabled = false;
+                  submitButton.disabled = !emailVerifiedForPosting;
                   uploadProgressArea.style.display = 'none';
              }
         }
@@ -2359,7 +2400,10 @@
                      
                      if (auth) {
                           auth.onAuthStateChanged(async (user) => { // Made async
-                             if (!user && !localStorage.getItem('nunciaya-user-session')) {
+                             if (user && user.isAnonymous) {
+                                 // Browsing pages sign visitors in anonymously; posting needs an account
+                                 window.location.href = 'my-account.html?redirect=post-ad.html';
+                             } else if (!user && !localStorage.getItem('nunciaya-user-session')) {
                                  console.log("No user logged in (onAuthStateChanged), redirecting.");
                                  window.location.href = 'my-account.html?redirect=post-ad.html';
                              } else if (user) {
@@ -2404,6 +2448,7 @@
                                  await refreshPaymentEntitlements();
                                  updateImageLimitLabel();
                                  if (window.setLang) window.setLang(currentLang);
+                                 await gateOnEmailVerification(user);
                              } else {
                                  console.log("Auth state changed, but no user found.");
                              }

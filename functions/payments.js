@@ -10,6 +10,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const Stripe = require("stripe");
 const promoCodes = require("./promo-codes");
+const { requireAccount, requireVerifiedAccount } = require("./auth-guards");
 
 const db = admin.firestore();
 
@@ -61,9 +62,7 @@ function normalizeOrigin(origin) {
  * Creates a Stripe Checkout session and a pending payment record in Firestore.
  */
 const createCheckoutSession = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Sign in to continue to payment.");
-  }
+  await requireVerifiedAccount(context, "Sign in to continue to payment.");
 
   const client = getStripeClient();
   const productType = data && data.productType;
@@ -173,9 +172,7 @@ const createCheckoutSession = functions.https.onCall(async (data, context) => {
  * Verifies a completed Checkout session after the user returns to the site.
  */
 const verifyCheckoutSession = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Sign in to verify payment.");
-  }
+  requireAccount(context, "Sign in to verify payment.");
 
   const client = getStripeClient();
   const sessionId = data && data.sessionId;

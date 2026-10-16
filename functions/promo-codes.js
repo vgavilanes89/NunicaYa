@@ -5,6 +5,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { isStripeLive } = require("./stripe-mode");
+const { requireAccount, requireVerifiedAccount } = require("./auth-guards");
 
 const db = admin.firestore();
 
@@ -242,9 +243,7 @@ async function assertAdmin(context) {
 }
 
 const validatePromoCode = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Sign in to use a discount code.");
-  }
+  requireAccount(context, "Sign in to use a discount code.");
 
   const code = data && data.code;
   const productType = normalizeProductType(data && data.productType);
@@ -289,9 +288,7 @@ const validatePromoCode = functions.https.onCall(async (data, context) => {
  * Redeem a 100% off code — grants entitlement without Stripe.
  */
 const redeemPromoCode = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Sign in to redeem a code.");
-  }
+  await requireVerifiedAccount(context, "Sign in to redeem a code.");
 
   const code = data && data.code;
   const productType = normalizeProductType(data && data.productType);

@@ -14,6 +14,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { isStripeLive } = require("./stripe-mode");
+const { requireAccount, requireVerifiedAccount } = require("./auth-guards");
 
 const db = admin.firestore();
 
@@ -182,10 +183,7 @@ function missingPaymentError(productType) {
  * Lists which paid products the user can still spend (unused payment records).
  */
 const getMyEntitlements = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Sign in to continue.");
-  }
-  const uid = context.auth.uid;
+  const uid = requireAccount(context);
   const snap = await db.collection("payments").where("userId", "==", uid).get();
   const counts = { housing_listing: 0, extra_images: 0 };
   snap.docs.forEach((doc) => {
@@ -206,10 +204,7 @@ const getMyEntitlements = functions.https.onCall(async (data, context) => {
  * data: { listing: {...}, payments?: { housing_listing?: sessionId, extra_images?: sessionId } }
  */
 const createListing = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Sign in to post an ad.");
-  }
-  const uid = context.auth.uid;
+  const uid = await requireVerifiedAccount(context, "Sign in to post an ad.");
   const listing = sanitizeListingInput(data && data.listing, uid);
   const hints = (data && data.payments && typeof data.payments === "object") ? data.payments : {};
   const needed = requiredProducts(listing.category, listing.imageUrls.length);
@@ -257,10 +252,7 @@ const createListing = functions.https.onCall(async (data, context) => {
  * data: { listingId, paymentId? }
  */
 const applyExtraImagesToListing = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Sign in to continue.");
-  }
-  const uid = context.auth.uid;
+  const uid = await requireVerifiedAccount(context);
   const listingId = data && data.listingId;
   if (typeof listingId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(listingId)) {
     throw new functions.https.HttpsError("invalid-argument", "listingId is required.");

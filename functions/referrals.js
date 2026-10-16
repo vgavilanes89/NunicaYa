@@ -87,20 +87,35 @@ const completeReferralSignup = functions.https.onCall(async (data, context) => {
   }
 
   const referredUid = context.auth.uid;
-  const referralCode = data && data.referralCode ? String(data.referralCode).trim() : "";
-  if (!referralCode) {
-    return { attributed: false, reason: "no_code" };
-  }
-
-  if (referralCode === referredUid) {
-    return { attributed: false, reason: "self_referral" };
-  }
+  // Code saved before the email was verified, so attribution works from any device
+  const pendingRef = db.collection("referral-pending").doc(referredUid);
+  let referralCode = data && data.referralCode ? String(data.referralCode).trim() : "";
 
   try {
+    if (!referralCode) {
+      const pendingSnap = await pendingRef.get();
+      if (pendingSnap.exists) referralCode = pendingSnap.data().referralCode || "";
+    }
+    if (!referralCode) {
+      return { attributed: false, reason: "no_code" };
+    }
+    if (referralCode === referredUid) {
+      return { attributed: false, reason: "self_referral" };
+    }
+
     const authUser = await admin.auth().getUser(referredUid);
     const createdMs = new Date(authUser.metadata.creationTime).getTime();
     if (Date.now() - createdMs > ATTRIBUTION_WINDOW_MS) {
       return { attributed: false, reason: "window_expired" };
+    }
+
+    // Points only count for verified emails (stops farming with throwaway addresses).
+    if (!authUser.emailVerified) {
+      await pendingRef.set({
+        referralCode,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return { attributed: false, reason: "email_not_verified", pending: true };
     }
 
     const referrerRef = db.collection("users").doc(referralCode);
@@ -151,6 +166,7 @@ const completeReferralSignup = functions.https.onCall(async (data, context) => {
         referralCode: referrerData.referralCode || referralCode,
       }, { merge: true });
 
+      tx.delete(pendingRef);
       return {
         attributed: true,
         referrerUid: referralCode,

@@ -34,6 +34,8 @@
                     <span class="lang-es">Bienvenido/a,</span>
                     <strong id="user-email-display"></strong>.
                 </p>
+                <!-- Shown until the email is verified (js/email-verification.js) -->
+                <div id="email-verify-notice" class="hidden"></div>
                 <a href="profile.html" id="profile-btn" class="mb-4 w-full text-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 block">
                     <span class="lang-en">My Profile</span>
                     <span class="lang-es">Mi Perfil</span>
@@ -201,7 +203,8 @@
     <script src="config.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
     <script src="app.js"></script>
-    <script src="js/referrals.js?v=2"></script>
+    <script src="js/email-verification.js?v=1"></script>
+    <script src="js/referrals.js?v=3"></script>
     <script src="js/referral-ui.js?v=2"></script>
 
     <!-- Page-Specific Script -->
@@ -324,7 +327,7 @@
                     'name-required': 'Please enter your display name.', // NEW
                     'fullname-required': 'Please enter your full name.', // NEW
                     'phone-required': 'Please enter your phone number.', // NEW
-                    'signup-success': 'Account created successfully! Please log in.',
+                    'signup-success': 'Account created! We sent you an email to verify your address.',
                     'login-success': 'Login successful! Redirecting...',
                     'reset-email-sent': 'Password reset email sent! Check your inbox.',
                     'auth/too-many-requests': 'Too many attempts. Please try again later.',
@@ -341,7 +344,7 @@
                     'name-required': 'Por favor ingrese su nombre para mostrar.', // NEW
                     'fullname-required': 'Por favor ingrese su nombre completo.', // NEW
                     'phone-required': 'Por favor ingrese su número de teléfono.', // NEW
-                    'signup-success': '¡Cuenta creada con éxito! Por favor inicie sesión.',
+                    'signup-success': '¡Cuenta creada! Le enviamos un correo para verificar su dirección.',
                     'login-success': '¡Ingreso exitoso! Redirigiendo...',
                     'reset-email-sent': '¡Correo de reenvío de contraseña enviado! Revise su bandeja de entrada.',
                     'auth/too-many-requests': 'Demasiados intentos. Por favor intente más tarde.',
@@ -421,6 +424,15 @@
                      phone: phone // NEW
                  });
 
+                // Posting ads and referral points need a verified email
+                if (window.NunciaYaEmailVerification) {
+                    try {
+                        await NunciaYaEmailVerification.send(userCredential.user);
+                    } catch (verifyErr) {
+                        console.warn('Could not send verification email:', verifyErr);
+                    }
+                }
+
                 if (window.NunciaYaReferrals) {
                     try {
                         const refResult = await NunciaYaReferrals.completeReferralSignup();
@@ -432,14 +444,10 @@
                     }
                 }
 
+                // The new user is signed in; onAuthStateChanged shows the account view with the
+                // "verify your email" notice.
                 displayMessage(signupMessageArea, 'signup-success', 'success');
                 signupForm.reset();
-                // Switch to login tab
-                setTimeout(() => {
-                    loginTabBtn.click();
-                    loginForm['login-email'].value = email; // Pre-fill email
-                    loginForm['login-password'].focus();
-                }, 1500);
 
             } catch (error) {
                 console.error("Sign up error:", error);
@@ -448,6 +456,49 @@
             signupButton.disabled = false;
         }
 
+
+        /** Shows the verify-email notice, or completes a pending referral once verified. */
+        async function refreshVerificationState(user) {
+            const notice = document.getElementById('email-verify-notice');
+            if (!window.NunciaYaEmailVerification || !notice) return;
+            let verified = false;
+            try {
+                verified = await NunciaYaEmailVerification.refresh(user);
+            } catch (err) {
+                console.warn('Could not refresh verification status:', err);
+            }
+            if (verified) {
+                notice.innerHTML = '';
+                notice.classList.add('hidden');
+                completePendingReferral(user);
+            } else {
+                NunciaYaEmailVerification.renderNotice(notice, user, {
+                    onVerified: () => completePendingReferral(user),
+                });
+            }
+        }
+
+        /**
+         * Referral points are awarded only after the new user verifies their email. The server
+         * keeps the code from sign-up, so this works even on a different device. Checked once
+         * per user per browser.
+         */
+        async function completePendingReferral(user) {
+            if (!window.NunciaYaReferrals) return;
+            const doneKey = 'nunciaya-referral-checked-' + user.uid;
+            try {
+                if (localStorage.getItem(doneKey)) return;
+            } catch (e) { /* storage blocked */ }
+            try {
+                const result = await NunciaYaReferrals.completeReferralSignup();
+                if (result && result.reason !== 'email_not_verified') {
+                    try { localStorage.setItem(doneKey, '1'); } catch (e) { /* ignore */ }
+                }
+                if (result && result.attributed) loadAccountReferralPoints();
+            } catch (err) {
+                console.warn('Referral attribution failed:', err);
+            }
+        }
 
         async function handleSignIn(e) {
             e.preventDefault();
@@ -585,6 +636,7 @@
                             localStorage.setItem('nunciaya-user-session', JSON.stringify(sessionData));
                             
                             showView('account');
+                            refreshVerificationState(user);
                             loadAccountReferralPoints();
                             updateReferralInviteBanner();
                             

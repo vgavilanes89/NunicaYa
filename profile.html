@@ -1050,7 +1050,8 @@
 
                     if (auth) {
                         auth.onAuthStateChanged(async (user) => {
-                            if (user) {
+                            // Anonymous sessions come from browsing pages; they have no profile
+                            if (user && !user.isAnonymous) {
                                 console.log("User is logged in:", user.uid);
                                 if (headerLoaded && window.runSessionLogic) window.runSessionLogic('./');
 

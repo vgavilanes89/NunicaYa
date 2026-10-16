@@ -73,9 +73,12 @@
         return callFn('logReferralShare', { method: method || 'copy' }).catch(() => null);
     }
 
+    /**
+     * Sends the stored ?ref= code (if any). With no code the server still checks for a code
+     * saved at sign-up while the email was unverified.
+     */
     function completeReferralSignup(referralCode) {
-        const code = referralCode || getStoredReferralCode();
-        if (!code) return Promise.resolve({ attributed: false, reason: 'no_code' });
+        const code = referralCode || getStoredReferralCode() || '';
         return callFn('completeReferralSignup', { referralCode: code })
             .then((result) => {
                 if (result && result.attributed) clearStoredReferral();
