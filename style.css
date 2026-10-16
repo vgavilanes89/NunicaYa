@@ -65,6 +65,27 @@ svg {
     }
 }
 
+/* Home page categories flow down balanced columns (like a newspaper) instead of rows, so a
+   long list such as "En Venta" doesn't leave empty space under the shorter ones. */
+.category-columns {
+    column-count: 1;
+    column-gap: 0;
+}
+.category-columns > .category-block {
+    width: 100%;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+@media (min-width: 640px) {
+    .category-columns { column-count: 2; }
+}
+@media (min-width: 1024px) {
+    .category-columns { column-count: 3; }
+}
+@media (min-width: 1280px) {
+    .category-columns { column-count: 4; }
+}
+
 /* Compiled from Tailwind:
   .category-title {
     @apply text-lg font-bold mb-2;
