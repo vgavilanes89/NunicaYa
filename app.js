@@ -1,5 +1,5 @@
-// --- Canonical host: send www.nunciaya.com visitors to nunciaya.com (one site for search
-// engines and one login origin). Set the same redirect in Firebase Hosting → www domain. ---
+// --- Canonical host: Firebase Hosting already 301-redirects www.nunciaya.com to nunciaya.com;
+// this is a fallback in case that domain setting is ever removed (one login origin, one site). ---
 if (typeof window !== 'undefined' && window.location.hostname === 'www.nunciaya.com') {
     window.location.replace('https://nunciaya.com' + window.location.pathname + window.location.search + window.location.hash);
 }
