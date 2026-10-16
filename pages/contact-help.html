@@ -232,6 +232,11 @@
             if (esMessage) esMessage.textContent = 'Enviando...';
 
             try {
+                // The rules require a signed-in user (any kind); visitors who haven't signed in get
+                // the same anonymous session the category pages use.
+                if (!auth.currentUser) {
+                    await auth.signInAnonymously();
+                }
                 const formData = new FormData(contactForm);
                 const helpRequest = {
                     name: formData.get('name'),
@@ -241,7 +246,8 @@
                     message: formData.get('message') || '',
                     submittedAt: firebase.firestore.Timestamp.now(),
                     status: 'new',
-                    userId: auth.currentUser ? auth.currentUser.uid : 'anonymous'
+                    userId: auth.currentUser.uid,
+                    accountType: auth.currentUser.isAnonymous ? 'visitor' : 'account'
                 };
 
                 // Add to Firestore
@@ -313,7 +319,7 @@
                                 const docSnap = await userDocRef.get();
                                 if (docSnap.exists) {
                                     currentUserData = docSnap.data();
-                                    contactName.value = currentUserData.name || '';
+                                    contactName.value = currentUserData.fullName || currentUserData.displayName || user.displayName || '';
                                     contactPhone.value = currentUserData.phone || '';
                                 } else {
                                     console.warn("No profile document found for user.");
