@@ -1413,7 +1413,7 @@
                 localStorage.removeItem('nunciaya-user-session');
                 try { await auth.signOut(); } catch (e) { /* user already deleted */ }
                 showDeleteAccountMessage('done', false);
-                setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+                setTimeout(() => { window.location.href = '/'; }, 2000);
             } catch (error) {
                 console.error('Account deletion failed:', error);
                 const code = String((error && error.code) || '');
@@ -1437,7 +1437,7 @@
                 await auth.signOut();
                 localStorage.removeItem('nunciaya-user-session');
                 console.log('User signed out');
-                window.location.href = 'index.html';
+                window.location.href = '/';
             } catch (error) {
                 console.error("Error signing out:", error);
             }

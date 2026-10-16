@@ -139,7 +139,7 @@ function updateLinks(pathPrefix, homeL, postEnL, postEsL, accEnL, accEsL,
     const isLoggedIn = localStorage.getItem('nunciaya-user-session');
     
     // Header Links
-    if (homeL) homeL.href = pathPrefix + 'index.html';
+    if (homeL) homeL.href = '/';
 
     if (isLoggedIn) {
         if (postEnL) postEnL.href = pathPrefix + 'post-ad.html';
